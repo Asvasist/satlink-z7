@@ -1,0 +1,38 @@
+# @implements SRS-ICD-001  (generated outputs: tools/regmap/regmap_gen.py)
+block: spec_tap
+description: >-
+  Spectrum tap (Linux-owned). Passes RX samples to the modem unchanged and, when enabled,
+  sends Hann-windowed 1024-sample frames to fft_spec. Never back-pressures the modem path:
+  if the FFT side is not ready, the frame is dropped and FRAME_DROPPED is set.
+registers:
+  - name: VERSION
+    offset: 0x00
+    access: RO
+    reset: 0x00010000
+    description: Block version.
+    fields:
+      - {name: MINOR, bits: "15:0", description: Minor version.}
+      - {name: MAJOR, bits: "31:16", description: Major version.}
+  - name: CTRL
+    offset: 0x04
+    access: RW
+    reset: 0x00000000
+    description: Control bits.
+    fields:
+      - {name: ENABLE, bits: "0", description: Capture frames for the FFT.}
+      - {name: WINDOW_EN, bits: "1", description: Apply the Hann window (0 = rectangular).}
+  - name: STATUS
+    offset: 0x08
+    access: W1C
+    reset: 0x00000000
+    description: Capture status.
+    fields:
+      - {name: BUSY, bits: "0", access: RO, description: A frame is currently being sent to the FFT.}
+      - {name: FRAME_DROPPED, bits: "1", description: A frame was dropped because the FFT was not ready.}
+  - name: FRAME_CNT
+    offset: 0x0C
+    access: RO
+    reset: 0x00000000
+    description: Number of frames sent to the FFT.
+    fields:
+      - {name: COUNT, bits: "31:0", description: Frame count (wraps).}

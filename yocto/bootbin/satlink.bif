@@ -1,0 +1,8 @@
+// BOOT.BIN for Stage 1: FSBL (Vitis) + bitstream (Vivado) + U-Boot (Yocto).
+//   bootgen -arch zynq -image satlink.bif -o BOOT.BIN -w on
+the_ROM_image:
+{
+    [bootloader] fsbl.elf
+    system.bit
+    u-boot.elf
+}

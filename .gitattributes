@@ -1,0 +1,11 @@
+# Force LF everywhere: shell scripts, Yocto recipes and patches break with CRLF on Windows.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.xsa binary
+*.bit binary
+*.bin binary
+*.elf binary

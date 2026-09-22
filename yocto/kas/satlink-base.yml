@@ -1,0 +1,52 @@
+# Common kas configuration: Yocto 5.0 "scarthgap" + meta-xilinx (linux-xlnx, u-boot-xlnx).
+# After the first successful build, pin every layer to an exact commit for reproducibility:
+#   kas dump --lock --inplace yocto/kas/zybo-z7-20.yml
+# @implements SRS-BLD-006
+header:
+  version: 14
+
+distro: poky
+target: satlink-image
+
+env:
+  SATLINK_RT: "0"
+
+repos:
+  satlink-z7:
+    layers:
+      yocto/meta-satlink:
+
+  poky:
+    url: https://git.yoctoproject.org/poky
+    branch: scarthgap
+    layers:
+      meta:
+      meta-poky:
+
+  meta-openembedded:
+    url: https://git.openembedded.org/meta-openembedded
+    branch: scarthgap
+    layers:
+      meta-oe:
+      meta-python:
+      meta-networking:
+
+  meta-arm:
+    url: https://git.yoctoproject.org/meta-arm
+    branch: scarthgap
+    layers:
+      meta-arm:
+      meta-arm-toolchain:
+
+  meta-xilinx:
+    url: https://github.com/Xilinx/meta-xilinx
+    branch: scarthgap
+    layers:
+      meta-xilinx-core:
+
+local_conf_header:
+  satlink: |
+    INHERIT += "rm_work"
+    PACKAGE_CLASSES = "package_ipk"
+    # Development convenience only: root login without password on console and SSH.
+    EXTRA_IMAGE_FEATURES ?= "debug-tweaks"

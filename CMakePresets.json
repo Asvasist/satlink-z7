@@ -1,0 +1,88 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_EXPORT_COMPILE_COMMANDS": "ON" }
+    },
+    {
+      "name": "host-debug",
+      "displayName": "Host: debug + unit tests",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SATLINK_TARGET": "host" }
+    },
+    {
+      "name": "host-coverage",
+      "displayName": "Host: unit tests with gcov coverage",
+      "inherits": "host-debug",
+      "cacheVariables": { "SATLINK_ENABLE_COVERAGE": "ON" }
+    },
+    {
+      "name": "host-asan",
+      "displayName": "Host: unit tests with ASan + UBSan",
+      "inherits": "host-debug",
+      "cacheVariables": { "SATLINK_ENABLE_SANITIZERS": "ON" }
+    },
+    {
+      "name": "host-tidy",
+      "displayName": "Host: build with clang-tidy (clang)",
+      "inherits": "host-debug",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "SATLINK_ENABLE_CLANG_TIDY": "ON"
+      }
+    },
+    {
+      "name": "linux-arm",
+      "displayName": "Core 0: Linux user space (arm-linux-gnueabihf)",
+      "inherits": "base",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/arm-linux-gnueabihf.cmake",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "rtos-a9",
+      "displayName": "Core 1: FreeRTOS firmware (arm-none-eabi)",
+      "inherits": "base",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/arm-none-eabi-cortex-a9.cmake",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "MinSizeRel" }
+    },
+    {
+      "name": "hkc-riscv",
+      "displayName": "MicroBlaze V: bare-metal firmware (riscv64-unknown-elf, rv32)",
+      "inherits": "base",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/riscv-microblaze-v.cmake",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "MinSizeRel" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "host-debug", "configurePreset": "host-debug" },
+    { "name": "host-coverage", "configurePreset": "host-coverage" },
+    { "name": "host-asan", "configurePreset": "host-asan" },
+    { "name": "host-tidy", "configurePreset": "host-tidy" },
+    { "name": "linux-arm", "configurePreset": "linux-arm" },
+    { "name": "rtos-a9", "configurePreset": "rtos-a9" },
+    { "name": "hkc-riscv", "configurePreset": "hkc-riscv" }
+  ],
+  "testPresets": [
+    {
+      "name": "host-debug",
+      "configurePreset": "host-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "host-coverage",
+      "configurePreset": "host-coverage",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "host-asan",
+      "configurePreset": "host-asan",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

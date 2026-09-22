@@ -1,0 +1,53 @@
+# @implements SRS-ICD-001  (generated outputs: tools/regmap/regmap_gen.py)
+block: ccsds_frame_accel
+description: >-
+  CCSDS frame accelerator (Linux-owned). Applies the CCSDS pseudo-randomizer to each frame
+  streamed through it by axi_dma_frame and computes CRC-16-CCITT over the output bytes.
+  Bit-exact reference: libs/common (satlink_ccsds_randomize_frame, satlink_crc16_ccitt).
+registers:
+  - name: VERSION
+    offset: 0x00
+    access: RO
+    reset: 0x00010000
+    description: Block version.
+    fields:
+      - {name: MINOR, bits: "15:0", description: Minor version.}
+      - {name: MAJOR, bits: "31:16", description: Major version.}
+  - name: CTRL
+    offset: 0x04
+    access: RW
+    reset: 0x00000000
+    description: Control bits.
+    fields:
+      - {name: RANDOMIZER_EN, bits: "0", description: XOR frames with the CCSDS sequence (0 = pass-through).}
+      - {name: IRQ_EN, bits: "1", description: Raise the interrupt when FRAME_DONE is set.}
+  - name: STATUS
+    offset: 0x08
+    access: W1C
+    reset: 0x00000000
+    description: Sticky event flags; write 1 to clear.
+    fields:
+      - {name: FRAME_DONE, bits: "0", description: A frame (TLAST) has left the block.}
+  - name: CRC
+    offset: 0x0C
+    access: RO
+    reset: 0x0000FFFF
+    description: >-
+      CRC-16-CCITT (init 0xFFFF) of the last output frame. Reads 0x0000 when the frame
+      ends with a valid big-endian FECF.
+    fields:
+      - {name: VALUE, bits: "15:0", description: CRC value.}
+  - name: LAST_LEN
+    offset: 0x10
+    access: RO
+    reset: 0x00000000
+    description: Length of the last frame in bytes.
+    fields:
+      - {name: BYTES, bits: "23:0", description: Byte count.}
+  - name: FRAME_CNT
+    offset: 0x14
+    access: RO
+    reset: 0x00000000
+    description: Number of frames processed since reset.
+    fields:
+      - {name: COUNT, bits: "31:0", description: Frame count (wraps).}

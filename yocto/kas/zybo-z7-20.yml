@@ -1,0 +1,10 @@
+# Build the SatLink-Z7 image for the Digilent Zybo Z7-20:
+#   kas build yocto/kas/zybo-z7-20.yml
+# PREEMPT_RT kernel fragment:
+#   SATLINK_RT=1 kas build yocto/kas/zybo-z7-20.yml
+header:
+  version: 14
+  includes:
+    - satlink-base.yml
+
+machine: zybo-z7-20

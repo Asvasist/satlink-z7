@@ -1,0 +1,77 @@
+# @implements SRS-ICD-001  (generated outputs: tools/regmap/regmap_gen.py)
+block: payload_ctrl
+description: >-
+  Modem control block (FreeRTOS-owned). Programs the TX/RX NCOs, drives the channel
+  emulator (noise, attenuation), packetizes the RX baseband stream for the modem DMA and
+  reports I2S underrun/overrun events.
+registers:
+  - name: VERSION
+    offset: 0x00
+    access: RO
+    reset: 0x00020000
+    description: Block version.
+    fields:
+      - {name: MINOR, bits: "15:0", description: Minor version.}
+      - {name: MAJOR, bits: "31:16", description: Major version (2 = hardware baseline v2).}
+  - name: CTRL
+    offset: 0x04
+    access: RW
+    reset: 0x00000000
+    description: Control bits.
+    fields:
+      - {name: RX_EN, bits: "0", description: "Forward RX baseband samples to the DMA (0 = discard)."}
+      - {name: DIG_LOOPBACK, bits: "1", description: Loop TX samples to RX inside the I2S interface.}
+      - {name: CODEC_UNMUTE, bits: "2", description: Drive the codec MUTE pin inactive.}
+      - {name: IRQ_EN, bits: "3", description: Raise the interrupt when a STATUS bit is set.}
+  - name: STATUS
+    offset: 0x08
+    access: W1C
+    reset: 0x00000000
+    description: Sticky event flags; write 1 to clear.
+    fields:
+      - {name: TX_UNDERRUN, bits: "0", description: I2S needed a TX sample but the FIFO was empty.}
+      - {name: RX_OVERRUN, bits: "1", description: An RX sample was lost because the FIFO was full.}
+  - name: TX_PINC
+    offset: 0x0C
+    access: RW
+    reset: 0x40000000
+    description: >-
+      TX NCO phase increment. A write sends one configuration beat to tx_nco.
+      f_carrier = PINC / 2^32 * 48 kHz (0x40000000 = 12 kHz).
+    fields:
+      - {name: PINC, bits: "31:0", description: Phase increment.}
+  - name: RX_PINC
+    offset: 0x10
+    access: RW
+    reset: 0x40000000
+    description: RX NCO phase increment (rx_nco outputs e^-jwt). A write sends one beat to rx_nco.
+    fields:
+      - {name: PINC, bits: "31:0", description: Phase increment.}
+  - name: RX_FRAME_LEN
+    offset: 0x14
+    access: RW
+    reset: 0x00000400
+    description: Number of baseband samples per DMA packet (TLAST period).
+    fields:
+      - {name: LEN, bits: "15:0", description: Samples per packet (must be > 0).}
+  - name: NOISE_LEVEL
+    offset: 0x18
+    access: RW
+    reset: 0x00000000
+    description: Channel emulator noise amplitude.
+    fields:
+      - {name: LEVEL, bits: "15:0", description: Noise amplitude (0 = emulator bypassed).}
+  - name: RX_SAMPLE_CNT
+    offset: 0x1C
+    access: RO
+    reset: 0x00000000
+    description: Free-running count of RX baseband samples.
+    fields:
+      - {name: COUNT, bits: "31:0", description: Sample count (wraps).}
+  - name: ATTEN
+    offset: 0x20
+    access: RW
+    reset: 0x00007FFF
+    description: Channel emulator linear gain.
+    fields:
+      - {name: GAIN_Q15, bits: "15:0", description: "Gain in Q1.15 (0x7FFF = 0 dB)."}

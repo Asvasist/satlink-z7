@@ -1,0 +1,93 @@
+# SatLink-Z7 address map — single source of truth for base addresses, IRQs and ownership.
+# Generated outputs: libs/regs/include/satlink/regs/address_map.h, docs/icd/generated/address_map.md
+#
+# status: fixed       = defined by the Zynq-7000 silicon
+#         provisional = planned value; confirm against the Vivado Address Editor, then set 'frozen'
+#         frozen      = confirmed by an exported hardware baseline (hw-vN tag)
+# @implements SRS-SYS-002
+# @implements SRS-ICD-003
+# @implements SRS-ICD-004
+# owner:  linux (Core 0), rtos (Core 1 FreeRTOS), hkc (MicroBlaze V), shared
+hardware_baseline: hw-v2
+
+spaces:
+  ps:
+    description: Zynq PS address space as seen by the Cortex-A9 cores (PL blocks via M_AXI_GP0)
+    irq_kind: GIC interrupt ID
+    regions:
+      - {name: ddr, base: 0x00000000, size: 0x40000000, owner: shared, status: fixed,
+         description: "1 GiB DDR3L, partitioned for AMP (see DDR partitions)"}
+      - {name: axi_dma_modem, base: 0x40400000, size: 0x00010000, owner: rtos, status: provisional,
+         ip: "AXI DMA (PG021), SG, 32-bit streams", irqs: {mm2s: 61, s2mm: 62},
+         description: "Modem symbol TX / baseband RX DMA"}
+      - {name: axi_dma_frame, base: 0x40410000, size: 0x00010000, owner: linux, status: provisional,
+         ip: "AXI DMA (PG021), SG, 8-bit streams", irqs: {mm2s: 65, s2mm: 66},
+         description: "Frame accelerator loopback DMA"}
+      - {name: axi_dma_spec, base: 0x40420000, size: 0x00010000, owner: linux, status: provisional,
+         ip: "AXI DMA (PG021), SG, S2MM only", irqs: {s2mm: 68},
+         description: "Spectrum monitor FFT output DMA"}
+      - {name: axi_gpio_0, base: 0x41200000, size: 0x00010000, owner: rtos, status: provisional,
+         ip: "AXI GPIO (PG144)", irqs: {gpio: 64},
+         description: "LEDs LD0-3 (ch1), buttons BTN0-3 (ch2)"}
+      - {name: payload_ctrl, base: 0x43C00000, size: 0x00010000, owner: rtos, status: provisional,
+         regmap: payload_ctrl, irqs: {status: 63},
+         description: "Modem control: NCOs, channel emulator, RX packetizer"}
+      - {name: ccsds_frame_accel, base: 0x43C10000, size: 0x00010000, owner: linux, status: provisional,
+         regmap: ccsds_frame_accel, irqs: {frame_done: 67},
+         description: "CCSDS randomizer + CRC-16 accelerator"}
+      - {name: spec_tap, base: 0x43C20000, size: 0x00010000, owner: linux, status: provisional,
+         regmap: spec_tap, description: "Spectrum tap: Hann window and frame gate in front of the FFT"}
+      - {name: ps_uart0, base: 0xE0000000, size: 0x00001000, owner: rtos, status: fixed,
+         irqs: {uart: 59}, description: "FreeRTOS console (EMIO, Pmod JE1/JE2)"}
+      - {name: ps_uart1, base: 0xE0001000, size: 0x00001000, owner: linux, status: fixed,
+         irqs: {uart: 82}, description: "Linux console (on-board USB-UART, ttyPS0)"}
+      - {name: ps_i2c0, base: 0xE0004000, size: 0x00001000, owner: linux, status: fixed,
+         irqs: {i2c: 57}, description: "SSM2603 codec configuration (EMIO)"}
+      - {name: ps_spi1, base: 0xE0007000, size: 0x00001000, owner: linux, status: fixed,
+         irqs: {spi: 81}, description: "PmodCAN #1 (MCP2515) on Pmod JF, MIO 10..15"}
+      - {name: ps_gpio, base: 0xE000A000, size: 0x00001000, owner: linux, status: fixed,
+         irqs: {gpio: 52}, description: "MIO GPIO (MIO0 = PmodCAN #1 INT)"}
+      - {name: ps_gem0, base: 0xE000B000, size: 0x00001000, owner: linux, status: fixed,
+         irqs: {eth: 54}, description: "Gigabit Ethernet"}
+      - {name: ps_sd0, base: 0xE0100000, size: 0x00001000, owner: linux, status: fixed,
+         irqs: {sd: 56}, description: "SD card (boot + root filesystem)"}
+      - {name: ps_ttc1, base: 0xF8002000, size: 0x00001000, owner: rtos, status: fixed,
+         irqs: {timer0: 69, timer1: 70, timer2: 71}, description: "FreeRTOS profiling timer"}
+      - {name: ps_swdt, base: 0xF8005000, size: 0x00001000, owner: linux, status: fixed,
+         irqs: {wdt: 41}, description: "System watchdog (FDIR, Stage 6)"}
+
+  hkc:
+    description: MicroBlaze V (housekeeping controller) data address space
+    irq_kind: AXI INTC input
+    regions:
+      - {name: lmb_bootloader, base: 0x00000000, size: 0x00004000, owner: hkc, status: provisional,
+         description: "Bootloader (reset vector), baked into the bitstream"}
+      - {name: lmb_app, base: 0x00004000, size: 0x0001C000, owner: hkc, status: provisional,
+         description: "Application image, loaded by the bootloader over CAN"}
+      - {name: hkc_gpio, base: 0x40000000, size: 0x00010000, owner: hkc, status: provisional,
+         irqs: {gpio: 6}, description: "Switches SW0-3 (ch1), RGB LED6 (ch2)"}
+      - {name: hkc_uart, base: 0x40600000, size: 0x00010000, owner: hkc, status: provisional,
+         irqs: {uart: 4}, description: "MCU console (Pmod JE7/JE8)"}
+      - {name: hkc_intc, base: 0x41200000, size: 0x00010000, owner: hkc, status: provisional,
+         description: "AXI interrupt controller"}
+      - {name: hkc_wdt, base: 0x41A00000, size: 0x00010000, owner: hkc, status: provisional,
+         irqs: {wdt: 0}, description: "Timebase watchdog (resets the MCU subsystem only)"}
+      - {name: hkc_timer, base: 0x41C00000, size: 0x00010000, owner: hkc, status: provisional,
+         irqs: {timer: 1}, description: "Tick and timestamp timer"}
+      - {name: hkc_spi, base: 0x44A00000, size: 0x00010000, owner: hkc, status: provisional,
+         irqs: {spi: 3, can2_int: 2}, description: "AXI Quad SPI to PmodCAN #2 (Pmod JB)"}
+      - {name: hkc_xadc, base: 0x44A10000, size: 0x00010000, owner: hkc, status: provisional,
+         irqs: {xadc: 5}, description: "XADC Wizard: die temperature and supply voltages"}
+
+# AMP partitioning of the 1 GiB DDR (must lie inside ps/ddr and must not overlap).
+ddr_partitions:
+  - {name: linux, base: 0x00000000, size: 0x38000000, owner: linux, status: provisional,
+     description: "Linux kernel and user space (896 MiB)"}
+  - {name: rtos_fw, base: 0x38000000, size: 0x01000000, owner: rtos, status: provisional,
+     description: "FreeRTOS image, heap and stacks (16 MiB)"}
+  - {name: rpmsg_shm, base: 0x39000000, size: 0x00100000, owner: shared, status: provisional,
+     description: "OpenAMP vrings and RPMsg buffers (1 MiB)"}
+  - {name: modem_dma, base: 0x39100000, size: 0x00F00000, owner: rtos, status: provisional,
+     description: "Modem DMA buffer descriptors and sample buffers (15 MiB)"}
+  - {name: reserved, base: 0x3A000000, size: 0x06000000, owner: shared, status: provisional,
+     description: "Reserved for later stages (96 MiB)"}

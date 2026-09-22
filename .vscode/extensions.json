@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-vscode.cmake-tools",
+    "llvm-vs-code-extensions.vscode-clangd",
+    "ms-python.python",
+    "redhat.vscode-yaml",
+    "bierner.markdown-mermaid",
+    "eclipse-cdt.cdt-gdb-vscode"
+  ]
+}

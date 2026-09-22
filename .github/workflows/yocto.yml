@@ -1,0 +1,39 @@
+# Yocto image build + QEMU smoke test.
+# A full Yocto build needs ~100 GB of disk and several hours on 4 cores, which exceeds GitHub's
+# hosted runners. Run it on a self-hosted runner labelled 'yocto' (e.g. your PC under WSL2).
+# @implements SRS-BLD-006
+# @verifies SRS-BSP-004
+name: yocto
+
+on:
+  workflow_dispatch:
+    inputs:
+      preempt_rt:
+        description: "Build with the PREEMPT_RT kernel fragment"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: [self-hosted, yocto]
+    timeout-minutes: 720
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kas
+        run: pipx install --force kas==4.7
+      - name: Build image
+        env:
+          SATLINK_RT: ${{ inputs.preempt_rt && '1' || '0' }}
+        run: kas build yocto/kas/zybo-z7-20.yml
+      - name: QEMU smoke test
+        run: python3 yocto/scripts/qemu_smoke.py --deploy-dir build/tmp/deploy/images/zybo-z7-20
+      - uses: actions/upload-artifact@v4
+        with:
+          name: satlink-image
+          path: |
+            build/tmp/deploy/images/zybo-z7-20/*.wic*
+            build/tmp/deploy/images/zybo-z7-20/u-boot.elf
+            build/tmp/deploy/images/zybo-z7-20/boot.scr

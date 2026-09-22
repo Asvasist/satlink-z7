@@ -1,0 +1,47 @@
+# Build output
+/build/
+/out/
+/coverage/
+*.gcda
+*.gcno
+compile_commands.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# IDEs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# Yocto (kas builds into build/ by default)
+/yocto/build/
+/downloads/
+/sstate-cache/
+
+# Vivado / Vitis (hw/ keeps only sources and Tcl; see hw/README.md)
+*.jou
+*.log
+*.str
+.Xil/
+hw/**/*.cache/
+hw/**/*.hw/
+hw/**/*.runs/
+hw/**/*.gen/
+hw/**/*.sim/
+hw/**/*.ip_user_files/
+hw/**/*.srcs/
+hw/vivado/
+hw/vitis/
+_ide/
+
+# Release artifacts are attached to GitHub releases, not committed
+*.xsa
+*.bit
+BOOT.BIN
+*.wic
+*.wic.bmap

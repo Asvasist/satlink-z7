@@ -1,0 +1,36 @@
+# Install once:  pip install pre-commit && pre-commit install
+# Run on all files: pre-commit run --all-files
+exclude: ^libs/regs/include/satlink/regs/
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.8
+    hooks:
+      - id: clang-format
+        types_or: [c, c++]
+  - repo: local
+    hooks:
+      - id: regmap-gen
+        name: regenerate register headers from icd/
+        entry: python3 tools/regmap/regmap_gen.py
+        language: system
+        pass_filenames: false
+        files: ^(icd/|tools/regmap/)
+      - id: trace-matrix
+        name: regenerate traceability matrix
+        entry: python3 tools/trace/trace_matrix.py
+        language: system
+        pass_filenames: false
+        always_run: true

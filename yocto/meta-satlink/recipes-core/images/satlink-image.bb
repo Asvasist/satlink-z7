@@ -1,0 +1,21 @@
+SUMMARY = "SatLink-Z7 target image"
+DESCRIPTION = "Embedded Linux for Core 0 of the Zynq-7020: bring-up, CAN, I2C, RT and debug tools."
+LICENSE = "MIT"
+# @implements SRS-BSP-003
+
+inherit core-image
+
+IMAGE_FEATURES += "ssh-server-openssh"
+
+IMAGE_INSTALL += " \
+    packagegroup-core-boot \
+    kernel-modules \
+    can-utils \
+    i2c-tools \
+    iproute2 \
+    ethtool \
+    rt-tests \
+    dtc \
+    devmem2 \
+    htop \
+"

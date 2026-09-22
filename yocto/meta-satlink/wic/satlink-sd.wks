@@ -1,0 +1,5 @@
+# SatLink-Z7 SD card layout. BOOT.BIN (FSBL + bitstream + U-Boot) is copied onto the boot
+# partition separately in Stage 1 (see yocto/bootbin/README.md).
+# @implements SRS-BOOT-001
+part /boot --source bootimg-partition --ondisk mmcblk0 --fstype=vfat --label boot --active --align 4096 --size 128M
+part / --source rootfs --ondisk mmcblk0 --fstype=ext4 --label root --align 4096

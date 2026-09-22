@@ -1,0 +1,315 @@
+[DOCUMENT]
+TITLE: SatLink-Z7 Software Requirements Specification
+
+[REQUIREMENT]
+UID: SRS-SYS-001
+STATUS: Accepted
+TITLE: Processor partitioning
+STATEMENT: >>>
+The system shall run embedded Linux on Cortex-A9 Core 0, FreeRTOS on Cortex-A9 Core 1 and
+bare-metal firmware on a MicroBlaze V soft processor in the PL.
+<<<
+RATIONALE: >>>
+Mirrors a real payload or instrument: a host computer, a hard-real-time controller and a
+housekeeping sub-controller.
+<<<
+
+[REQUIREMENT]
+UID: SRS-SYS-002
+STATUS: Accepted
+TITLE: Exclusive resource ownership
+STATEMENT: >>>
+Every peripheral, PL block, interrupt and DDR region shall have exactly one owner (linux, rtos,
+hkc or shared) recorded in the ICD address map.
+<<<
+RATIONALE: >>>
+AMP systems fail in subtle ways when two operating systems touch the same hardware.
+<<<
+
+[REQUIREMENT]
+UID: SRS-SYS-003
+STATUS: Draft
+TITLE: Telecommand and telemetry interface
+STATEMENT: >>>
+The payload shall accept telecommands and deliver telemetry as CCSDS Space Packets using PUS
+services over UDP/IP on Ethernet.
+<<<
+RATIONALE: >>>
+Standard space ground interface (ECSS-E-ST-70-41C). Detailed in Stage 5.
+<<<
+
+[REQUIREMENT]
+UID: SRS-SYS-004
+STATUS: Draft
+TITLE: Instrument control interface
+STATEMENT: >>>
+The payload shall provide a SCPI command interface on TCP port 5025.
+<<<
+RATIONALE: >>>
+Allows scripted control with pyVISA like a laboratory instrument. Detailed in Stage 6.
+<<<
+
+[REQUIREMENT]
+UID: SRS-SYS-005
+STATUS: Draft
+TITLE: Adaptive coding and modulation
+STATEMENT: >>>
+The modem shall switch between MODCODs at frame boundaries based on the measured link quality.
+<<<
+RATIONALE: >>>
+Core function of a software-defined telecom payload. Detailed in Stages 4 and 5.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BLD-001
+STATUS: Accepted
+TITLE: Single build system
+STATEMENT: >>>
+All software shall build from one CMake project with presets for the host, Linux (Core 0),
+FreeRTOS (Core 1) and MicroBlaze V targets.
+<<<
+RATIONALE: >>>
+One build entry point keeps the four targets consistent and CI simple.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BLD-002
+STATUS: Accepted
+TITLE: Warning-free code
+STATEMENT: >>>
+SatLink C and C++ code shall compile without warnings using -Wall -Wextra -Wpedantic
+-Wconversion -Wsign-conversion and -Werror.
+<<<
+RATIONALE: >>>
+Warnings are cheap early defect detection (shift-left).
+<<<
+
+[REQUIREMENT]
+UID: SRS-BLD-003
+STATUS: Accepted
+TITLE: Continuous integration
+STATEMENT: >>>
+Every push and pull request shall run formatting checks, static analysis, host unit tests,
+sanitizer tests, cross builds for all embedded targets and the ICD/traceability consistency
+checks.
+<<<
+RATIONALE: >>>
+Defects are found minutes after they are introduced.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BLD-004
+STATUS: Accepted
+TITLE: Static analysis
+STATEMENT: >>>
+C and C++ code shall be analysed with clang-tidy and cppcheck; a MISRA C:2012 report shall be
+produced for the C code on every CI run.
+<<<
+RATIONALE: >>>
+Industry practice for safety-and mission-critical embedded code.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BLD-005
+STATUS: Accepted
+TITLE: Unit test coverage
+STATEMENT: >>>
+Line coverage of the libraries shall be measured on every CI run and shall be at least 80 %.
+<<<
+RATIONALE: >>>
+Makes test gaps visible and keeps them from growing.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BLD-006
+STATUS: Accepted
+TITLE: Reproducible Linux build
+STATEMENT: >>>
+The Linux image shall be built with Yocto from a kas configuration that pins all layer
+revisions.
+<<<
+RATIONALE: >>>
+Anyone can rebuild the exact image from the repository.
+<<<
+
+[REQUIREMENT]
+UID: SRS-ICD-001
+STATUS: Accepted
+TITLE: Register maps as single source of truth
+STATEMENT: >>>
+Register maps shall be defined only in the YAML files under icd/regmap; C headers, C++ headers
+and ICD documentation shall be generated from them, and CI shall fail if the generated files are
+out of date.
+<<<
+RATIONALE: >>>
+Prevents drift between FPGA, firmware, drivers and documentation.
+<<<
+
+[REQUIREMENT]
+UID: SRS-ICD-002
+STATUS: Accepted
+TITLE: Register map validation
+STATEMENT: >>>
+The generator shall reject misaligned or duplicate register offsets, overlapping fields, fields
+outside bits 31..0, unknown access types and reset values with bits outside all fields.
+<<<
+RATIONALE: >>>
+Interface errors are caught before they reach hardware.
+<<<
+
+[REQUIREMENT]
+UID: SRS-ICD-003
+STATUS: Accepted
+TITLE: Address and interrupt map
+STATEMENT: >>>
+The ICD shall list base address, size, interrupts, owner and status for every PL block and every
+PS peripheral used, and the generator shall reject overlapping regions, duplicate interrupts and
+unaligned bases.
+<<<
+RATIONALE: >>>
+Device tree, FreeRTOS BSP and MicroBlaze firmware all derive from one table.
+<<<
+
+[REQUIREMENT]
+UID: SRS-ICD-004
+STATUS: Accepted
+TITLE: AMP memory partitioning
+STATEMENT: >>>
+The ICD shall define non-overlapping DDR partitions for Linux, FreeRTOS, RPMsg shared memory and
+modem DMA buffers, all inside physical DDR.
+<<<
+RATIONALE: >>>
+Required for safe AMP operation (Stage 4).
+<<<
+
+[REQUIREMENT]
+UID: SRS-LIB-001
+STATUS: Accepted
+TITLE: CRC-16-CCITT
+STATEMENT: >>>
+The common library shall provide CRC-16-CCITT with polynomial 0x1021, initial value 0xFFFF, no
+reflection and no final XOR, as used for the CCSDS frame error control field.
+<<<
+RATIONALE: >>>
+Bit-exact reference for the ccsds_frame_accel PL block and for software framing.
+<<<
+
+[REQUIREMENT]
+UID: SRS-LIB-002
+STATUS: Accepted
+TITLE: CCSDS pseudo-randomizer
+STATEMENT: >>>
+The common library shall provide the CCSDS 131.0-B pseudo-randomizer with h(x) = x^8 + x^7 + x^5
++ x^3 + 1, seeded with all ones at the start of every frame.
+<<<
+RATIONALE: >>>
+Bit-exact reference for the ccsds_frame_accel PL block.
+<<<
+
+[REQUIREMENT]
+UID: SRS-LIB-003
+STATUS: Accepted
+TITLE: Portable common library
+STATEMENT: >>>
+The common library shall be written in C11, use no dynamic memory and no operating system
+services, and build for all four targets.
+<<<
+RATIONALE: >>>
+The same code runs on Linux, FreeRTOS, the MicroBlaze V and the host test build.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BSP-001
+STATUS: Accepted
+TITLE: Yocto BSP layer
+STATEMENT: >>>
+A Yocto layer meta-satlink shall provide the machine configuration, image recipe and boot files
+for the Zybo Z7-20.
+<<<
+RATIONALE: >>>
+Owning the BSP is part of the project scope.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BSP-002
+STATUS: Accepted
+TITLE: Kernel configuration
+STATEMENT: >>>
+Kernel configuration changes shall be kept as configuration fragments in meta-satlink; a
+PREEMPT_RT fragment shall be selectable with SATLINK_RT = "1".
+<<<
+RATIONALE: >>>
+Reviewable, minimal kernel configuration changes.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BSP-003
+STATUS: Accepted
+TITLE: Board boot
+STATEMENT: >>>
+The image shall boot from SD card to a login prompt on the UART1 console and accept SSH
+connections over Ethernet.
+<<<
+RATIONALE: >>>
+Stage 1 exit criterion.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BSP-004
+STATUS: Accepted
+TITLE: QEMU smoke test
+STATEMENT: >>>
+The kernel, device tree and root file system shall boot to a login prompt in QEMU's
+xilinx-zynq-a9 machine, driven by an automated script.
+<<<
+RATIONALE: >>>
+Linux integration can be tested without hardware (shift-left).
+<<<
+
+[REQUIREMENT]
+UID: SRS-BOOT-001
+STATUS: Accepted
+TITLE: Stage 1 boot chain
+STATEMENT: >>>
+The board shall boot FSBL, bitstream and U-Boot from BOOT.BIN on SD card; U-Boot shall load the
+kernel and device tree with a boot script.
+<<<
+RATIONALE: >>>
+Baseline boot chain; hardened in Stage 3.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BOOT-002
+STATUS: Draft
+TITLE: Secure A/B boot
+STATEMENT: >>>
+U-Boot shall boot only signed FIT images, keep A and B slots, count boot attempts and roll back
+to the last good slot automatically.
+<<<
+RATIONALE: >>>
+Detailed in Stage 3.
+<<<
+
+[REQUIREMENT]
+UID: SRS-DOC-001
+STATUS: Accepted
+TITLE: Architecture documentation
+STATEMENT: >>>
+The architecture shall be documented in arc42 structure with diagrams, and significant decisions
+shall be recorded as ADRs.
+<<<
+RATIONALE: >>>
+Makes design intent reviewable.
+<<<
+
+[REQUIREMENT]
+UID: SRS-DOC-002
+STATUS: Accepted
+TITLE: Traceability
+STATEMENT: >>>
+A traceability matrix linking every requirement to implementing and verifying artifacts shall be
+generated from source tags, and CI shall fail on tags that reference unknown requirements.
+<<<
+RATIONALE: >>>
+Requirements, code and tests stay consistent.
+<<<
