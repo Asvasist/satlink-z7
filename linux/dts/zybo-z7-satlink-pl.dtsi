@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * PL device-tree nodes for the Linux-owned blocks in icd/address_map.yaml.
+ *
+ * Not yet wired into the Yocto build (yocto/meta-satlink/conf/machine/zybo-z7-20.conf still
+ * boots the mainline PS-only zynq-zybo-z7.dtb - see its header comment). This file plugs in
+ * once hw-v1 exists, one of two ways:
+ *
+ *   1. Regenerate the PL device tree from the hw-v1 XSA with device-tree-xlnx, then merge the
+ *      "compatible", "dmas" and "dma-names" properties below into the nodes it generates for
+ *      these two addresses (device-tree-xlnx knows the register map, not the Linux binding).
+ *   2. Or /include/ this file directly from a board system-user.dtsi and drop KERNEL_DEVICETREE
+ *      in favour of building zynq-zybo-z7-satlink.dts in meta-satlink.
+ *
+ * Addresses, sizes and interrupts: icd/address_map.yaml (status: provisional until hw-v1).
+ * GIC SPI number = platform IRQ - 32 (standard Zynq-7000 convention).
+ */
+
+/ {
+	amba_pl: amba_pl {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		axi_dma_frame: dma@40410000 {
+			compatible = "xlnx,axi-dma-1.00.a";
+			reg = <0x40410000 0x10000>;
+			#dma-cells = <1>;
+			/* mm2s = 65 -> GIC SPI 33, s2mm = 66 -> GIC SPI 34 */
+			interrupts = <0 33 4>, <0 34 4>;
+			interrupt-names = "mm2s_introut", "s2mm_introut";
+			xlnx,include-sg;
+		};
+
+		ccsds_frame_accel: ccsds-frame-accel@43c10000 {
+			compatible = "satlink,ccsds-frame-accel";
+			reg = <0x43c10000 0x10000>;
+			/* frame_done = 67 -> GIC SPI 35 */
+			interrupts = <0 35 4>;
+			dmas = <&axi_dma_frame 0>, <&axi_dma_frame 1>;
+			dma-names = "mm2s", "s2mm";
+		};
+	};
+};

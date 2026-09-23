@@ -3,9 +3,9 @@
 
 Generated from `@implements` / `@verifies` tags in the source tree.
 
-- Requirements: 26 (22 accepted)
-- Accepted and implemented: 20 / 22
-- Accepted and verified by an automated test: 9 / 22
+- Requirements: 32 (28 accepted)
+- Accepted and implemented: 26 / 28
+- Accepted and verified by an automated test: 12 / 28
 
 | UID | Title | Status | Implemented by | Verified by |
 |---|---|---|---|---|
@@ -23,6 +23,12 @@ Generated from `@implements` / `@verifies` tags in the source tree.
 | SRS-BSP-004 | QEMU smoke test | Accepted | `yocto/scripts/qemu_smoke.py` | `.github/workflows/yocto.yml`<br>`yocto/scripts/qemu_smoke.py` |
 | SRS-DOC-001 | Architecture documentation | Accepted | - | - |
 | SRS-DOC-002 | Traceability | Accepted | `tools/trace/trace_matrix.py` | `tools/trace/tests/test_trace_matrix.py` |
+| SRS-DRV-001 | Platform driver with device-tree binding | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c`<br>`yocto/meta-satlink/recipes-kernel/satlink-ccsds-frame-accel/satlink-ccsds-frame-accel_1.0.bb` | - |
+| SRS-DRV-002 | Char device control interface | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c`<br>`linux/include/uapi/satlink/ccsds_frame_accel.h` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp` |
+| SRS-DRV-003 | Interrupt-driven status | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c` | - |
+| SRS-DRV-004 | DMA through dmaengine | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c` | - |
+| SRS-HAL-001 | C++ HAL over the char device | Accepted | `linux/hal/CMakeLists.txt`<br>`linux/hal/include/satlink/hal/ccsds_frame_accel.hpp`<br>`linux/hal/src/ccsds_frame_accel.cpp` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp` |
+| SRS-HAL-002 | HAL testable without hardware | Accepted | `linux/hal/CMakeLists.txt`<br>`linux/hal/include/satlink/hal/char_device_io.hpp`<br>`linux/hal/include/satlink/hal/posix_char_device.hpp`<br>`linux/hal/src/posix_char_device.cpp` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp` |
 | SRS-ICD-001 | Register maps as single source of truth | Accepted | `icd/regmap/ccsds_frame_accel.yaml`<br>`icd/regmap/payload_ctrl.yaml`<br>`icd/regmap/spec_tap.yaml`<br>`libs/regs/CMakeLists.txt`<br>`libs/regs/include/satlink/regdef.h`<br>`libs/regs/include/satlink/regdef.hpp`<br>`tools/regmap/regmap_gen.py` | `tests/unit/regs/test_regdef.cpp`<br>`tests/unit/regs/test_regs_c.c`<br>`tools/regmap/tests/test_regmap_gen.py` |
 | SRS-ICD-002 | Register map validation | Accepted | `tools/regmap/regmap_gen.py` | `tools/regmap/tests/test_regmap_gen.py` |
 | SRS-ICD-003 | Address and interrupt map | Accepted | `icd/address_map.yaml`<br>`tools/regmap/regmap_gen.py` | `tests/unit/regs/test_regs_c.c`<br>`tools/regmap/tests/test_regmap_gen.py` |

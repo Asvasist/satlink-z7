@@ -313,3 +313,78 @@ generated from source tags, and CI shall fail on tags that reference unknown req
 RATIONALE: >>>
 Requirements, code and tests stay consistent.
 <<<
+
+[REQUIREMENT]
+UID: SRS-DRV-001
+STATUS: Accepted
+TITLE: Platform driver with device-tree binding
+STATEMENT: >>>
+Each Linux-owned PL block shall have an out-of-tree platform driver matched by a device-tree
+compatible string, with its register base, size and interrupts taken only from the device tree,
+never hard-coded.
+<<<
+RATIONALE: >>>
+Matches upstream kernel practice and keeps the driver correct if the address map changes.
+<<<
+
+[REQUIREMENT]
+UID: SRS-DRV-002
+STATUS: Accepted
+TITLE: Char device control interface
+STATEMENT: >>>
+Each platform driver shall expose a character device with an ioctl interface for control and
+status registers; ioctl argument structs shall be defined once in a shared UAPI header used by
+both the kernel driver and user space.
+<<<
+RATIONALE: >>>
+A single struct definition prevents kernel/user-space layout mismatches.
+<<<
+
+[REQUIREMENT]
+UID: SRS-DRV-003
+STATUS: Accepted
+TITLE: Interrupt-driven status
+STATEMENT: >>>
+Each platform driver shall request its interrupt(s) from the device tree and shall not require
+user space to poll status registers for normal operation.
+<<<
+RATIONALE: >>>
+Polling from user space wastes CPU and adds latency; the hardware already raises an IRQ.
+<<<
+
+[REQUIREMENT]
+UID: SRS-DRV-004
+STATUS: Accepted
+TITLE: DMA through dmaengine
+STATEMENT: >>>
+Bulk data transfer to and from a Linux-owned PL block shall use the kernel dmaengine API against
+the block's dedicated AXI DMA channel; the driver shall not implement its own descriptor rings.
+<<<
+RATIONALE: >>>
+Reuses a reviewed, maintained subsystem instead of a bespoke and harder-to-verify one.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HAL-001
+STATUS: Accepted
+TITLE: C++ HAL over the char device
+STATEMENT: >>>
+A C++20 HAL class shall wrap each driver's ioctl interface behind a RAII object with typed
+methods, so application and test code never issues raw ioctl() calls.
+<<<
+RATIONALE: >>>
+Keeps ioctl numbers and struct layouts in one place and gives callers a safe, typed API.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HAL-002
+STATUS: Accepted
+TITLE: HAL testable without hardware
+STATEMENT: >>>
+Each HAL class shall depend on an abstract char-device-I/O interface, injected at construction,
+so host unit tests can exercise HAL logic against a mock with no board present.
+<<<
+RATIONALE: >>>
+Driver logic (sequencing, error mapping, retries) must be verifiable in CI, which has no Zybo
+board attached.
+<<<

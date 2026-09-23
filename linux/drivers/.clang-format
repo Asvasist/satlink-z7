@@ -1,0 +1,3 @@
+# Kernel code follows Linux kernel style (tabs, checkpatch.pl), not the project-wide style in
+# the root .clang-format: it has to read like upstream for anyone reviewing or upstreaming it.
+BasedOnStyle: Linux

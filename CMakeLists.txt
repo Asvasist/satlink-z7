@@ -71,6 +71,10 @@ message(STATUS "SatLink-Z7 ${PROJECT_VERSION} (${SATLINK_GIT_REVISION}) target=$
 add_subdirectory(libs/common)
 add_subdirectory(libs/regs)
 
+if(SATLINK_TARGET MATCHES "^(host|linux)$")
+    add_subdirectory(linux/hal)
+endif()
+
 if(SATLINK_BUILD_TESTS)
     if(NOT SATLINK_TARGET STREQUAL "host")
         message(FATAL_ERROR "SATLINK_BUILD_TESTS is only supported for SATLINK_TARGET=host")

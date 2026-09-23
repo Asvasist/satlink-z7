@@ -16,3 +16,7 @@ satlink_add_gtest(test_regdef
     SOURCES unit/regs/test_regdef.cpp
     LIBS satlink::regs
 )
+satlink_add_gtest(test_ccsds_frame_accel_hal
+    SOURCES unit/hal/test_ccsds_frame_accel_hal.cpp
+    LIBS satlink::hal
+)

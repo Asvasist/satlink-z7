@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: GPL-2.0
+obj-m += ccsds_frame_accel_drv.o
+ccflags-y += -I$(src)/../../include/uapi

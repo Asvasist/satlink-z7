@@ -10,6 +10,7 @@ IMAGE_FEATURES += "ssh-server-openssh"
 IMAGE_INSTALL += " \
     packagegroup-core-boot \
     kernel-modules \
+    satlink-ccsds-frame-accel \
     can-utils \
     i2c-tools \
     iproute2 \

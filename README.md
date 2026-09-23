@@ -1,7 +1,7 @@
 # SatLink-Z7
 
 [![ci](https://github.com/Asvasist/satlink-z7/actions/workflows/ci.yml/badge.svg)](https://github.com/Asvasist/satlink-z7/actions/workflows/ci.yml)
-[![Stage](https://img.shields.io/badge/stage-1%20of%206-blue)](docs/stages/stage-1.md)
+[![Stage](https://img.shields.io/badge/stage-1--2%20of%206-blue)](docs/stages/stage-2.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A software-defined satellite payload and ground link, built end-to-end on a single Zynq-7020
@@ -125,7 +125,7 @@ yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOO
 | Stage | Content | Status |
 |---|---|---|
 | 1 | Foundation and BSP: build system, CI, requirements, ICD, Yocto layer, boot | **in progress** |
-| 2 | Linux drivers, C++ HAL, diagnostics, board bring-up | planned |
+| 2 | Linux drivers, C++ HAL, diagnostics, board bring-up | **in progress** |
 | 3 | Housekeeping MCU, CAN bootloader, secure A/B boot | planned |
 | 4 | AMP and real-time modem (FreeRTOS, FEC, synchronization) | planned |
 | 5 | Adaptive link (ACM, LEO pass emulation) and on-board networking | planned |
@@ -143,10 +143,16 @@ Stage 1 is in progress:
 - [x] SRS (StrictDoc), arc42 architecture doc, ADRs, ICD address/register maps
 - [x] Reference library (`libs/common`: CRC-16-CCITT, CCSDS randomizer) with unit tests
 - [x] Yocto `meta-satlink` BSP layer and `kas` configuration written
-- [ ] First local host build + unit test run (in progress)
-- [ ] Repository pushed and public, CI green
+- [ ] First local host build + unit test run (blocked: see [docs/stages/stage-2.md](docs/stages/stage-2.md) notes)
+- [x] Repository pushed and public
+- [ ] CI green (pending first push's Actions run)
 - [ ] First Yocto image built and booted (QEMU, then hardware)
 - [ ] Vivado `hw-v1` block design exported, board bring-up report
+
+Stage 2 is in progress: `ccsds_frame_accel` platform driver, UAPI header, and the C++ HAL
+(`satlink::hal::FrameAccelerator`) are written and traced to requirements, mock-tested (unverified
+pending the same local toolchain block). Still open: the `spec_tap` driver, I2C codec bring-up,
+SocketCAN, and a diagnostic CLI. Details: [docs/stages/stage-2.md](docs/stages/stage-2.md).
 
 ## Hardware
 

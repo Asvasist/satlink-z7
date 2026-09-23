@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: (GPL-2.0 OR MIT)
+# Devicetree binding, in the format of Documentation/devicetree/bindings in the Linux kernel
+# tree (dt-schema). Not yet wired into a dt-schema CI check; see docs/stages/stage-2.md.
+%YAML 1.2
+---
+$id: http://satlink-z7/schemas/ccsds_frame_accel.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: SatLink-Z7 CCSDS frame accelerator
+
+maintainers:
+  - SatLink-Z7
+
+description: |
+  Applies the CCSDS pseudo-randomizer to each frame streamed through it by its AXI DMA channels
+  and computes a CRC-16-CCITT over the output. Register map: icd/regmap/ccsds_frame_accel.yaml.
+
+properties:
+  compatible:
+    const: satlink,ccsds-frame-accel
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+    description: FRAME_DONE, raised when CTRL.IRQ_EN is set and a frame completes.
+
+  dmas:
+    items:
+      - description: TX (mm2s) channel of the block's dedicated axi_dma_frame instance
+      - description: RX (s2mm) channel of the same instance
+
+  dma-names:
+    items:
+      - const: mm2s
+      - const: s2mm
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - dmas
+  - dma-names
+
+additionalProperties: false
+
+examples:
+  - |
+    ccsds_frame_accel: ccsds-frame-accel@43c10000 {
+        compatible = "satlink,ccsds-frame-accel";
+        reg = <0x43c10000 0x10000>;
+        interrupts = <0 35 4>; /* GIC SPI 35 = platform IRQ 67, icd/address_map.yaml */
+        dmas = <&axi_dma_frame 0>, <&axi_dma_frame 1>;
+        dma-names = "mm2s", "s2mm";
+    };
