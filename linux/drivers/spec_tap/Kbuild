@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: GPL-2.0
+obj-m += spec_tap_drv.o
+ccflags-y += -I$(src)/../../include/uapi

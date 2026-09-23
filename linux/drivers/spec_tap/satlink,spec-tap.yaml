@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: (GPL-2.0 OR MIT)
+# Devicetree binding, in the format of Documentation/devicetree/bindings in the Linux kernel
+# tree (dt-schema). Not yet wired into a dt-schema check.
+# @implements SRS-DRV-001
+%YAML 1.2
+---
+$id: http://satlink-z7/schemas/spec_tap.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: SatLink-Z7 spectrum tap
+
+maintainers:
+  - SatLink-Z7
+
+description: |
+  Passes RX samples to the modem unchanged and, when enabled, sends Hann-windowed 1024-sample
+  frames to the FFT. Has no interrupt of its own: the FFT output leaves through its AXI DMA.
+  Register map: icd/regmap/spec_tap.yaml.
+
+properties:
+  compatible:
+    const: satlink,spec-tap
+
+  reg:
+    maxItems: 1
+
+  dmas:
+    items:
+      - description: RX (s2mm) channel of the FFT output axi_dma_spec instance
+
+  dma-names:
+    items:
+      - const: s2mm
+
+required:
+  - compatible
+  - reg
+  - dmas
+  - dma-names
+
+additionalProperties: false
+
+examples:
+  - |
+    spec_tap: spec-tap@43c20000 {
+        compatible = "satlink,spec-tap";
+        reg = <0x43c20000 0x10000>;
+        dmas = <&axi_dma_spec 1>;
+        dma-names = "s2mm";
+    };
