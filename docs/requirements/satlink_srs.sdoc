@@ -345,11 +345,12 @@ UID: SRS-DRV-003
 STATUS: Accepted
 TITLE: Interrupt-driven status
 STATEMENT: >>>
-Each platform driver shall request its interrupt(s) from the device tree and shall not require
-user space to poll status registers for normal operation.
+Each platform driver for a block that has an interrupt in the ICD shall request that interrupt
+from the device tree and shall not require user space to poll status registers for normal
+operation. Blocks without an interrupt expose their status through an ioctl read.
 <<<
 RATIONALE: >>>
-Polling from user space wastes CPU and adds latency; the hardware already raises an IRQ.
+Polling from user space wastes CPU and adds latency; where the hardware raises an IRQ, use it.
 <<<
 
 [REQUIREMENT]
@@ -387,4 +388,44 @@ so host unit tests can exercise HAL logic against a mock with no board present.
 RATIONALE: >>>
 Driver logic (sequencing, error mapping, retries) must be verifiable in CI, which has no Zybo
 board attached.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PER-001
+STATUS: Accepted
+TITLE: Audio codec configuration from Linux
+STATEMENT: >>>
+Linux shall configure the SSM2603 audio codec over the PS I2C controller (line-in to ADC, DAC to
+headphone out, 48 kHz, I2S slave) through a HAL class that sends register frames over an
+abstract I2C bus interface. The HAL shall keep a shadow of the write-only registers.
+<<<
+RATIONALE: >>>
+The codec's data path belongs to the PL modem; Linux only sets it up. The device cannot be read
+back, so the driver needs its own record of what it wrote.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PER-002
+STATUS: Accepted
+TITLE: CAN through SocketCAN
+STATEMENT: >>>
+PmodCAN #1 (MCP2515 on PS SPI1) shall be exposed as a SocketCAN interface using the mainline
+mcp251x driver, described by the device tree, and shall pass a loopback frame test from a script
+using can-utils.
+<<<
+RATIONALE: >>>
+Reuses the mainline driver and standard tooling instead of a bespoke CAN stack.
+<<<
+
+[REQUIREMENT]
+UID: SRS-DIAG-001
+STATUS: Accepted
+TITLE: Diagnostic command line tool
+STATEMENT: >>>
+A command line tool shall exercise the frame accelerator, spectrum tap and codec through the HAL
+classes. Its command logic shall be separated from device opening so that host unit tests run it
+against mocks.
+<<<
+RATIONALE: >>>
+First thing to run on a fresh board, and its logic is checked in CI without hardware.
 <<<

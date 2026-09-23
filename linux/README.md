@@ -1,34 +1,53 @@
 # Linux software (Cortex-A9 Core 0)
 
-Stage 2: platform drivers for the Linux-owned PL blocks, device-tree bindings, the C++ HAL, and
-bring-up of the peripherals Linux owns directly. Stage 5 adds the payload manager on top.
+Stage 2: platform drivers for the Linux-owned PL blocks, device-tree fragments, the C++ HAL, the
+peripherals Linux owns directly, and a diagnostic tool. Stage 5 adds the payload manager on top.
 
 ```
-drivers/ccsds_frame_accel/   out-of-tree platform driver: DT-bound, char device, IRQ, dmaengine
-hal/                          satlink::hal - typed C++20 wrapper over the driver char devices
-include/uapi/satlink/         ioctl structs shared verbatim by kernel and user space
-dts/                           PL device-tree fragment for the Linux-owned blocks
+drivers/ccsds_frame_accel/   platform driver: DT-bound, char device, IRQ, dmaengine
+drivers/spec_tap/            platform driver: DT-bound, char device, dmaengine
+hal/                         satlink::hal - typed C++20 wrappers (frame accelerator, spectrum
+                             tap, SSM2603 codec) over abstract CharDeviceIo / I2cBus interfaces
+diag/                        satlink-diag: command logic (portable) and the Linux executable
+include/uapi/satlink/        ioctl structs shared verbatim by the kernel and user space
+dts/                         PL and PS device-tree fragments and the combined board tree
+scripts/                     CAN bring-up and loopback test (can-utils)
 ```
 
-Exit criteria and current status: [docs/stages/stage-2.md](../docs/stages/stage-2.md).
+Exit criteria, design notes and the bring-up checklist: [docs/stages/stage-2.md](../docs/stages/stage-2.md).
 
-## Building the kernel module
+## satlink-diag
 
-Out-of-tree, against the Yocto eSDK (`bitbake satlink-image -c populate_sdk`, see
-[yocto/README.md](../yocto/README.md)):
+```
+satlink-diag fa version | ctrl [randomizer=on|off] [irq=on|off] | wait [timeout_ms=N]
+satlink-diag spec version | ctrl [enable=on|off] [window=on|off] | status | clear
+satlink-diag codec init [wordlength=16|20|24|32] | volume <0-127> | mute on|off
+```
+
+`--dev PATH` overrides the device node. Exit codes: 0 ok, 1 device error, 2 usage error,
+3 timeout. Run `codec init` once after boot, then `codec volume` / `codec mute`.
+
+## CAN
 
 ```bash
-source /opt/satlink/5.x/environment-setup-cortexa9t2hf-neon-satlink-linux-gnueabi
-make -C linux/drivers/ccsds_frame_accel
+linux/scripts/can-loopback-test.sh can0    # MCP2515 internal loopback, no second node needed
+linux/scripts/can-up.sh can0 500000        # normal mode, for the two-node test in Stage 3
 ```
 
-In the Yocto build itself it's `yocto/meta-satlink/recipes-kernel/satlink-ccsds-frame-accel`,
-which builds this same source directory via `externalsrc` rather than a separate copy.
+## Building the kernel modules
 
-## Still open in Stage 2
+Out-of-tree, against a configured kernel build tree, for example the one from the Yocto SDK:
 
-- `spec_tap` platform driver + HAL (same shape as `ccsds_frame_accel`)
-- SSM2603 codec bring-up over I2C
-- MCP2515 as SocketCAN on `ps_spi1`
-- A diagnostic CLI exercising both HAL classes
-- Board bring-up once hw-v1's XSA exists (Stage 1 item 11)
+```bash
+make -C linux/drivers/ccsds_frame_accel KERNEL_SRC=/path/to/kernel-build ARCH=arm \
+     CROSS_COMPILE=arm-linux-gnueabihf-
+```
+
+In the Yocto build they are `satlink-ccsds-frame-accel` and `satlink-spec-tap`, which build these
+same directories with `externalsrc`. `satlink-diag` is in the `satlink-tools` recipe, and the
+`linux-arm` CMake preset builds it as well.
+
+## Licence note
+
+The kernel modules are GPL-2.0 (they use GPL-only kernel symbols); everything else in the
+repository is MIT.

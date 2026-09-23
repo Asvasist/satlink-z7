@@ -79,7 +79,7 @@ as the link adapts.
 | Linux kernel driver development | Platform drivers with device-tree bindings, char devices, IRQ + `dmaengine` DMA — Stage 2 |
 | AMP / heterogeneous multicore | OpenAMP + RPMsg between Linux (Core 0) and FreeRTOS (Core 1) — Stage 4 |
 | Bus protocols: SPI, I2C, I2S, UART, CAN | MCP2515 CAN over SPI, SSM2603 codec over I2C, I2S audio, debug UART consoles — Stages 2–3 |
-| DMA and custom digital logic | AXI DMA to/from the modem, frame accelerator and FFT block; RTL in `hw/rtl` | 
+| DMA and custom digital logic | AXI DMA to/from the modem, frame accelerator and FFT block; RTL in `hw/rtl` |
 | Bootloaders and boot images | FSBL, U-Boot, A/B image scheme with CRC/signature check and golden-image fallback — Stages 1 & 5 |
 | C / C++ (C11, C++20) | `libs/common` (portable C11), C++20 HAL and payload manager, MISRA-oriented static analysis |
 | Qt / cross-platform GUI | Ground station on Windows and Linux — Stage 6 |
@@ -97,7 +97,7 @@ hw/              Vivado block design Tcl, RTL, constraints, filter coefficients
 icd/             interface control: address map and register maps (YAML)
 libs/common/     portable C11 library (CRC-16, CCSDS randomizer, ...)
 libs/regs/       generated register headers (C and C++)
-linux/           kernel drivers, C++ HAL, payload manager                      (Stage 2)
+linux/           kernel drivers, C++ HAL, satlink-diag, payload manager        (Stage 2, 5)
 tests/           unit tests
 tools/           register-map generator, traceability matrix
 yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOOT.BIN recipe
@@ -143,16 +143,18 @@ Stage 1 is in progress:
 - [x] SRS (StrictDoc), arc42 architecture doc, ADRs, ICD address/register maps
 - [x] Reference library (`libs/common`: CRC-16-CCITT, CCSDS randomizer) with unit tests
 - [x] Yocto `meta-satlink` BSP layer and `kas` configuration written
-- [ ] First local host build + unit test run (blocked: see [docs/stages/stage-2.md](docs/stages/stage-2.md) notes)
+- [ ] First local host build + unit test run
 - [x] Repository pushed and public
-- [ ] CI green (pending first push's Actions run)
+- [ ] CI green (first Actions run pending)
 - [ ] First Yocto image built and booted (QEMU, then hardware)
 - [ ] Vivado `hw-v1` block design exported, board bring-up report
 
-Stage 2 is in progress: `ccsds_frame_accel` platform driver, UAPI header, and the C++ HAL
-(`satlink::hal::FrameAccelerator`) are written and traced to requirements, mock-tested (unverified
-pending the same local toolchain block). Still open: the `spec_tap` driver, I2C codec bring-up,
-SocketCAN, and a diagnostic CLI. Details: [docs/stages/stage-2.md](docs/stages/stage-2.md).
+Stage 2 is written and waiting for its first build and the board: platform drivers for
+`ccsds_frame_accel` and `spec_tap`, the C++ HAL (frame accelerator, spectrum tap, SSM2603 codec)
+with 43 mock-based unit tests, the `satlink-diag` tool, device-tree fragments, CAN bring-up
+scripts and Yocto recipes. What remains is on the hardware side: the first kernel and image
+build, then bring-up with the hw-v1 bitstream. Details and checklist:
+[docs/stages/stage-2.md](docs/stages/stage-2.md).
 
 ## Hardware
 

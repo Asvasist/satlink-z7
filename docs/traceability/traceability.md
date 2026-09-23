@@ -3,9 +3,9 @@
 
 Generated from `@implements` / `@verifies` tags in the source tree.
 
-- Requirements: 32 (28 accepted)
-- Accepted and implemented: 26 / 28
-- Accepted and verified by an automated test: 12 / 28
+- Requirements: 35 (31 accepted)
+- Accepted and implemented: 29 / 31
+- Accepted and verified by an automated test: 15 / 31
 
 | UID | Title | Status | Implemented by | Verified by |
 |---|---|---|---|---|
@@ -21,14 +21,15 @@ Generated from `@implements` / `@verifies` tags in the source tree.
 | SRS-BSP-002 | Kernel configuration | Accepted | `yocto/meta-satlink/recipes-kernel/linux/files/preempt-rt.cfg`<br>`yocto/meta-satlink/recipes-kernel/linux/files/satlink.cfg`<br>`yocto/meta-satlink/recipes-kernel/linux/linux-xlnx_%.bbappend` | - |
 | SRS-BSP-003 | Board boot | Accepted | `yocto/meta-satlink/recipes-core/images/satlink-image.bb` | - |
 | SRS-BSP-004 | QEMU smoke test | Accepted | `yocto/scripts/qemu_smoke.py` | `.github/workflows/yocto.yml`<br>`yocto/scripts/qemu_smoke.py` |
+| SRS-DIAG-001 | Diagnostic command line tool | Accepted | `linux/diag/CMakeLists.txt`<br>`linux/diag/include/satlink/diag/device_factory.hpp`<br>`linux/diag/include/satlink/diag/diag.hpp`<br>`linux/diag/src/diag.cpp`<br>`linux/diag/src/main.cpp`<br>`yocto/meta-satlink/recipes-support/satlink-tools/satlink-tools_1.0.bb` | `tests/unit/hal/test_diag.cpp` |
 | SRS-DOC-001 | Architecture documentation | Accepted | - | - |
 | SRS-DOC-002 | Traceability | Accepted | `tools/trace/trace_matrix.py` | `tools/trace/tests/test_trace_matrix.py` |
-| SRS-DRV-001 | Platform driver with device-tree binding | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c`<br>`yocto/meta-satlink/recipes-kernel/satlink-ccsds-frame-accel/satlink-ccsds-frame-accel_1.0.bb` | - |
-| SRS-DRV-002 | Char device control interface | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c`<br>`linux/include/uapi/satlink/ccsds_frame_accel.h` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp` |
+| SRS-DRV-001 | Platform driver with device-tree binding | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c`<br>`linux/drivers/spec_tap/satlink,spec-tap.yaml`<br>`linux/drivers/spec_tap/spec_tap_drv.c`<br>`linux/dts/zybo-z7-satlink-pl.dtsi`<br>`yocto/meta-satlink/recipes-kernel/satlink-ccsds-frame-accel/satlink-ccsds-frame-accel_1.0.bb`<br>`yocto/meta-satlink/recipes-kernel/satlink-spec-tap/satlink-spec-tap_1.0.bb` | - |
+| SRS-DRV-002 | Char device control interface | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c`<br>`linux/drivers/spec_tap/spec_tap_drv.c`<br>`linux/include/uapi/satlink/ccsds_frame_accel.h`<br>`linux/include/uapi/satlink/spec_tap.h` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp`<br>`tests/unit/hal/test_spec_tap_hal.cpp` |
 | SRS-DRV-003 | Interrupt-driven status | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c` | - |
-| SRS-DRV-004 | DMA through dmaengine | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c` | - |
-| SRS-HAL-001 | C++ HAL over the char device | Accepted | `linux/hal/CMakeLists.txt`<br>`linux/hal/include/satlink/hal/ccsds_frame_accel.hpp`<br>`linux/hal/src/ccsds_frame_accel.cpp` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp` |
-| SRS-HAL-002 | HAL testable without hardware | Accepted | `linux/hal/CMakeLists.txt`<br>`linux/hal/include/satlink/hal/char_device_io.hpp`<br>`linux/hal/include/satlink/hal/posix_char_device.hpp`<br>`linux/hal/src/posix_char_device.cpp` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp` |
+| SRS-DRV-004 | DMA through dmaengine | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c`<br>`linux/drivers/spec_tap/spec_tap_drv.c` | - |
+| SRS-HAL-001 | C++ HAL over the char device | Accepted | `linux/hal/CMakeLists.txt`<br>`linux/hal/include/satlink/hal/block_version.hpp`<br>`linux/hal/include/satlink/hal/ccsds_frame_accel.hpp`<br>`linux/hal/include/satlink/hal/spec_tap.hpp`<br>`linux/hal/src/ccsds_frame_accel.cpp`<br>`linux/hal/src/spec_tap.cpp` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp`<br>`tests/unit/hal/test_diag.cpp`<br>`tests/unit/hal/test_spec_tap_hal.cpp` |
+| SRS-HAL-002 | HAL testable without hardware | Accepted | `linux/hal/CMakeLists.txt`<br>`linux/hal/include/satlink/hal/char_device_io.hpp`<br>`linux/hal/include/satlink/hal/i2c_bus.hpp`<br>`linux/hal/include/satlink/hal/i2c_dev_bus.hpp`<br>`linux/hal/include/satlink/hal/posix_char_device.hpp`<br>`linux/hal/src/i2c_dev_bus.cpp`<br>`linux/hal/src/posix_char_device.cpp` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp`<br>`tests/unit/hal/test_spec_tap_hal.cpp`<br>`tests/unit/hal/test_ssm2603_hal.cpp` |
 | SRS-ICD-001 | Register maps as single source of truth | Accepted | `icd/regmap/ccsds_frame_accel.yaml`<br>`icd/regmap/payload_ctrl.yaml`<br>`icd/regmap/spec_tap.yaml`<br>`libs/regs/CMakeLists.txt`<br>`libs/regs/include/satlink/regdef.h`<br>`libs/regs/include/satlink/regdef.hpp`<br>`tools/regmap/regmap_gen.py` | `tests/unit/regs/test_regdef.cpp`<br>`tests/unit/regs/test_regs_c.c`<br>`tools/regmap/tests/test_regmap_gen.py` |
 | SRS-ICD-002 | Register map validation | Accepted | `tools/regmap/regmap_gen.py` | `tools/regmap/tests/test_regmap_gen.py` |
 | SRS-ICD-003 | Address and interrupt map | Accepted | `icd/address_map.yaml`<br>`tools/regmap/regmap_gen.py` | `tests/unit/regs/test_regs_c.c`<br>`tools/regmap/tests/test_regmap_gen.py` |
@@ -36,6 +37,8 @@ Generated from `@implements` / `@verifies` tags in the source tree.
 | SRS-LIB-001 | CRC-16-CCITT | Accepted | `libs/common/include/satlink/common/crc16_ccitt.h`<br>`libs/common/src/crc16_ccitt.c` | `tests/unit/common/test_crc16_ccitt.c` |
 | SRS-LIB-002 | CCSDS pseudo-randomizer | Accepted | `libs/common/include/satlink/common/ccsds_randomizer.h`<br>`libs/common/src/ccsds_randomizer.c` | `tests/unit/common/test_ccsds_randomizer.c` |
 | SRS-LIB-003 | Portable common library | Accepted | `libs/common/CMakeLists.txt`<br>`libs/common/include/satlink/common/status.h` | - |
+| SRS-PER-001 | Audio codec configuration from Linux | Accepted | `linux/dts/zybo-z7-satlink-ps.dtsi`<br>`linux/hal/include/satlink/hal/ssm2603.hpp`<br>`linux/hal/src/ssm2603.cpp` | `tests/unit/hal/test_diag.cpp`<br>`tests/unit/hal/test_ssm2603_hal.cpp` |
+| SRS-PER-002 | CAN through SocketCAN | Accepted | `linux/dts/zybo-z7-satlink-ps.dtsi`<br>`linux/scripts/can-up.sh` | `linux/scripts/can-loopback-test.sh` |
 | SRS-SYS-001 | Processor partitioning | Accepted | - | - |
 | SRS-SYS-002 | Exclusive resource ownership | Accepted | `icd/address_map.yaml` | `tools/regmap/tests/test_regmap_gen.py` |
 | SRS-SYS-003 | Telecommand and telemetry interface | Draft | - | - |
