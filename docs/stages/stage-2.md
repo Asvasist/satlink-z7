@@ -54,6 +54,7 @@ SPI) are configured, and a small tool exercises all of it on the board.
 
 - ICD generator, traceability matrix and their Python tests run and pass.
 - `clang-format` (18.1.8, the version CI and pre-commit use) passes on every C and C++ file.
+- clang-tidy (18.1.8) reports no error-level findings on any C or C++ source.
 - All host unit tests (the stage 1 libraries plus the 43 HAL, codec and diagnostic tests) build
   with clang at `-Werror` with the project's warning set and pass on a Windows host, using the
   compat headers for the missing kernel headers.
