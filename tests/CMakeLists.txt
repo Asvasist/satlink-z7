@@ -20,3 +20,15 @@ satlink_add_gtest(test_ccsds_frame_accel_hal
     SOURCES unit/hal/test_ccsds_frame_accel_hal.cpp
     LIBS satlink::hal
 )
+satlink_add_gtest(test_spec_tap_hal
+    SOURCES unit/hal/test_spec_tap_hal.cpp
+    LIBS satlink::hal
+)
+satlink_add_gtest(test_ssm2603_hal
+    SOURCES unit/hal/test_ssm2603_hal.cpp
+    LIBS satlink::hal
+)
+satlink_add_gtest(test_diag
+    SOURCES unit/hal/test_diag.cpp
+    LIBS satlink::diag
+)

@@ -73,6 +73,7 @@ add_subdirectory(libs/regs)
 
 if(SATLINK_TARGET MATCHES "^(host|linux)$")
     add_subdirectory(linux/hal)
+    add_subdirectory(linux/diag)
 endif()
 
 if(SATLINK_BUILD_TESTS)

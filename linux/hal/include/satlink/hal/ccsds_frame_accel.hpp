@@ -10,15 +10,12 @@
 #include <cstdint>
 #include <optional>
 
+#include "satlink/hal/block_version.hpp"
 #include "satlink/hal/char_device_io.hpp"
 
 namespace satlink::hal {
 
-struct FrameAccelVersion
-{
-    std::uint16_t major;
-    std::uint16_t minor;
-};
+using FrameAccelVersion = BlockVersion;
 
 struct FrameAccelCtrl
 {

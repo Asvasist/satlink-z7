@@ -4,24 +4,14 @@
  */
 #include "satlink/hal/ccsds_frame_accel.hpp"
 
-#include <system_error>
+#include "hal_error.hpp"
 
 extern "C" {
 #include <satlink/ccsds_frame_accel.h>
 }
 
 namespace satlink::hal {
-namespace {
-
-void ThrowOnFailure(int rc, const char *what)
-{
-    if (rc != 0)
-    {
-        throw std::system_error(-rc, std::generic_category(), what);
-    }
-}
-
-} // namespace
+using detail::ThrowOnFailure;
 
 FrameAccelVersion FrameAccelerator::GetVersion() const
 {
