@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * SatLink-Z7 board device tree: the mainline Zybo Z7 plus the nodes for everything Linux owns.
+ * Built into the kernel by yocto/meta-satlink when SATLINK_PL_DT=1 (needs the hw-v1 bitstream).
+ */
+#include "zynq-zybo-z7.dts"
+#include "zybo-z7-satlink-ps.dtsi"
+#include "zybo-z7-satlink-pl.dtsi"

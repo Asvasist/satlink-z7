@@ -11,6 +11,8 @@ IMAGE_INSTALL += " \
     packagegroup-core-boot \
     kernel-modules \
     satlink-ccsds-frame-accel \
+    satlink-spec-tap \
+    satlink-tools \
     can-utils \
     i2c-tools \
     iproute2 \

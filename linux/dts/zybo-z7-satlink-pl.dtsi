@@ -1,45 +1,86 @@
 // SPDX-License-Identifier: (GPL-2.0 OR MIT)
 /*
- * PL device-tree nodes for the Linux-owned blocks in icd/address_map.yaml.
+ * PL device-tree nodes for the blocks Linux owns, from icd/address_map.yaml.
  *
- * Not yet wired into the Yocto build (yocto/meta-satlink/conf/machine/zybo-z7-20.conf still
- * boots the mainline PS-only zynq-zybo-z7.dtb - see its header comment). This file plugs in
- * once hw-v1 exists, one of two ways:
+ * Only meaningful together with a bitstream that contains these blocks (hw-v1 or later): reading
+ * a PL register that is not there stalls the AXI bus. That is why the Yocto build selects this
+ * device tree only when SATLINK_PL_DT=1 (see yocto/README.md).
  *
- *   1. Regenerate the PL device tree from the hw-v1 XSA with device-tree-xlnx, then merge the
- *      "compatible", "dmas" and "dma-names" properties below into the nodes it generates for
- *      these two addresses (device-tree-xlnx knows the register map, not the Linux binding).
- *   2. Or /include/ this file directly from a board system-user.dtsi and drop KERNEL_DEVICETREE
- *      in favour of building zynq-zybo-z7-satlink.dts in meta-satlink.
+ * Addresses, sizes and interrupts are still "provisional" in the ICD until the Address Editor of
+ * the exported design confirms them. GIC SPI number = platform IRQ - 32.
  *
- * Addresses, sizes and interrupts: icd/address_map.yaml (status: provisional until hw-v1).
- * GIC SPI number = platform IRQ - 32 (standard Zynq-7000 convention).
+ * @implements SRS-DRV-001
  */
+#include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
 	amba_pl: amba_pl {
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
+		interrupt-parent = <&intc>;
 		ranges;
 
+		/* Frame accelerator loopback DMA, 8-bit streams. mm2s = IRQ 65, s2mm = IRQ 66. */
 		axi_dma_frame: dma@40410000 {
 			compatible = "xlnx,axi-dma-1.00.a";
 			reg = <0x40410000 0x10000>;
 			#dma-cells = <1>;
-			/* mm2s = 65 -> GIC SPI 33, s2mm = 66 -> GIC SPI 34 */
-			interrupts = <0 33 4>, <0 34 4>;
-			interrupt-names = "mm2s_introut", "s2mm_introut";
+			/* FCLK0; confirm which PL clock the block design uses. */
+			clocks = <&clkc 15>, <&clkc 15>, <&clkc 15>, <&clkc 15>;
+			clock-names = "s_axi_lite_aclk", "m_axi_sg_aclk", "m_axi_mm2s_aclk",
+				      "m_axi_s2mm_aclk";
+			xlnx,addrwidth = <32>;
 			xlnx,include-sg;
+
+			dma-channel@40410000 {
+				compatible = "xlnx,axi-dma-mm2s-channel";
+				interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
+				xlnx,datawidth = <8>;
+				xlnx,device-id = <0>;
+			};
+
+			dma-channel@40410030 {
+				compatible = "xlnx,axi-dma-s2mm-channel";
+				interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+				xlnx,datawidth = <8>;
+				xlnx,device-id = <0>;
+			};
 		};
 
+		/* FFT output DMA, S2MM only. IRQ 68. Stream width is not in the ICD yet: 32 assumed. */
+		axi_dma_spec: dma@40420000 {
+			compatible = "xlnx,axi-dma-1.00.a";
+			reg = <0x40420000 0x10000>;
+			#dma-cells = <1>;
+			clocks = <&clkc 15>, <&clkc 15>, <&clkc 15>;
+			clock-names = "s_axi_lite_aclk", "m_axi_sg_aclk", "m_axi_s2mm_aclk";
+			xlnx,addrwidth = <32>;
+			xlnx,include-sg;
+
+			dma-channel@40420030 {
+				compatible = "xlnx,axi-dma-s2mm-channel";
+				interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
+				xlnx,datawidth = <32>;
+				xlnx,device-id = <0>;
+			};
+		};
+
+		/* Channel index: 0 = mm2s, 1 = s2mm (the driver numbers s2mm after all mm2s slots). */
 		ccsds_frame_accel: ccsds-frame-accel@43c10000 {
 			compatible = "satlink,ccsds-frame-accel";
 			reg = <0x43c10000 0x10000>;
-			/* frame_done = 67 -> GIC SPI 35 */
-			interrupts = <0 35 4>;
+			/* frame_done = IRQ 67 */
+			interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
 			dmas = <&axi_dma_frame 0>, <&axi_dma_frame 1>;
 			dma-names = "mm2s", "s2mm";
+		};
+
+		spec_tap: spec-tap@43c20000 {
+			compatible = "satlink,spec-tap";
+			reg = <0x43c20000 0x10000>;
+			dmas = <&axi_dma_spec 1>;
+			dma-names = "s2mm";
 		};
 	};
 };

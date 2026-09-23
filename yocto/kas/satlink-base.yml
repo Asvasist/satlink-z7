@@ -10,6 +10,7 @@ target: satlink-image
 
 env:
   SATLINK_RT: "0"
+  SATLINK_PL_DT: "0"
 
 repos:
   satlink-z7:

@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * PS-side additions on top of the mainline Zybo Z7 device tree: PmodCAN #1 (MCP2515) on SPI1 and
+ * the I2C controller that carries the audio codec.
+ *
+ * Pins: icd/address_map.yaml and hw/README.md (Pmod JF: MIO13 CS, MIO10 MOSI, MIO11 MISO,
+ * MIO12 SCK, MIO0 = MCP2515 INT).
+ *
+ * @implements SRS-PER-001
+ * @implements SRS-PER-002
+ */
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/pinctrl/pinctrl-zynq.h>
+
+/ {
+	/* Crystal on the PmodCAN board that clocks the MCP2515. Check the marking on your board. */
+	can_osc: can-oscillator {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <16000000>;
+	};
+};
+
+&pinctrl0 {
+	pinctrl_spi1_default: spi1-default {
+		mux {
+			groups = "spi1_0_grp";
+			function = "spi1";
+		};
+
+		conf {
+			groups = "spi1_0_grp";
+			bias-disable;
+			slew-rate = <0>;
+			power-source = <IO_STANDARD_LVCMOS33>;
+		};
+	};
+
+	pinctrl_can_int_default: can-int-default {
+		mux {
+			groups = "gpio0_0_grp";
+			function = "gpio0";
+		};
+
+		conf {
+			groups = "gpio0_0_grp";
+			bias-high-z;
+			slew-rate = <0>;
+			power-source = <IO_STANDARD_LVCMOS33>;
+		};
+	};
+};
+
+&spi1 {
+	status = "okay";
+	num-cs = <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_spi1_default>, <&pinctrl_can_int_default>;
+
+	can0: can@0 {
+		compatible = "microchip,mcp2515";
+		reg = <0>;
+		clocks = <&can_osc>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+		spi-max-frequency = <10000000>;
+	};
+};
+
+/* SSM2603 sits at 0x1a; it is configured from user space through i2c-dev (satlink-diag codec). */
+&i2c0 {
+	status = "okay";
+	clock-frequency = <100000>;
+};

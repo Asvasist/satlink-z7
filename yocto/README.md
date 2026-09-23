@@ -25,6 +25,15 @@ kas build yocto/kas/zybo-z7-20.yml                 # standard kernel
 SATLINK_RT=1 kas build yocto/kas/zybo-z7-20.yml    # with the PREEMPT_RT fragment
 ```
 
+`SATLINK_PL_DT=1` builds and boots the board device tree that describes the PL blocks and the
+extra PS peripherals (`linux/dts`). Use it only with a bitstream that contains those blocks
+(hw-v1 or later); with the PS-only bitstream the drivers would read PL registers that are not
+there. The default is the mainline PS-only tree used for the first boot.
+
+```bash
+SATLINK_PL_DT=1 kas build yocto/kas/zybo-z7-20.yml
+```
+
 Outputs are in `build/tmp/deploy/images/zybo-z7-20/`: `satlink-image-zybo-z7-20.rootfs.wic`,
 `u-boot.elf`, `boot.scr`, `zImage`, `zynq-zybo-z7.dtb`.
 
