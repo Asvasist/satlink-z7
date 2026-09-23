@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0
-# Out-of-tree build against the Yocto eSDK (see yocto/README.md for `... -c populate_sdk`).
+# Out-of-tree build. KERNEL_SRC must point at a configured kernel build tree, for example the
+# one from the Yocto SDK, together with the SDK's cross-compiler environment:
 #
-#   source /opt/satlink/5.x/environment-setup-cortexa9t2hf-neon-satlink-linux-gnueabi
-#   make -C linux/drivers/ccsds_frame_accel
-#
-# KERNEL_SRC is set by the eSDK environment script; override it to point at a built kernel tree
-# for a manual build instead.
+#   make -C linux/drivers/<driver> KERNEL_SRC=/path/to/kernel-build ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
 
-KERNEL_SRC ?= $(KERNEL_SRC)
+ifeq ($(KERNEL_SRC),)
+$(error KERNEL_SRC is not set: point it at a configured kernel build tree)
+endif
+
 PWD := $(shell pwd)
 
 modules:
