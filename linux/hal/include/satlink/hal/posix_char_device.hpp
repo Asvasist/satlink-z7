@@ -13,13 +13,12 @@
 
 #include "satlink/hal/char_device_io.hpp"
 
-namespace satlink::hal
-{
+namespace satlink::hal {
 
 /// RAII wrapper around a single open character-device file descriptor.
 class PosixCharDevice final : public CharDeviceIo
 {
-public:
+  public:
     /// Throws std::system_error if @p path cannot be opened.
     explicit PosixCharDevice(const std::string &path);
     ~PosixCharDevice() override;
@@ -29,7 +28,7 @@ public:
 
     int Ioctl(unsigned long request, void *arg) override;
 
-private:
+  private:
     int fd_;
 };
 

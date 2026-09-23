@@ -8,14 +8,14 @@
 #include <stdint.h>
 
 #include "satlink/common/ccsds_randomizer.h"
+
 #include "unity.h"
 
 void setUp(void) {}
 void tearDown(void) {}
 
 /* First bytes of the CCSDS 131.0-B pseudo-randomizer sequence. */
-static const uint8_t k_expected_prefix[] = {0xFFU, 0x48U, 0x0EU, 0xC0U,
-                                            0x9AU, 0x0DU, 0x70U, 0xBCU};
+static const uint8_t k_expected_prefix[] = {0xFFU, 0x48U, 0x0EU, 0xC0U, 0x9AU, 0x0DU, 0x70U, 0xBCU};
 
 static void test_sequence_starts_with_ccsds_reference_bytes(void)
 {

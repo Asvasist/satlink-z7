@@ -7,7 +7,6 @@
  * @verifies SRS-ICD-001
  */
 #include <cstdint>
-
 #include <gtest/gtest.h>
 
 #include "satlink/regdef.hpp"

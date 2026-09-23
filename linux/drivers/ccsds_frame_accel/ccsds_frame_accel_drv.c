@@ -35,40 +35,39 @@
 
 #include <satlink/ccsds_frame_accel.h>
 
-#define FA_REG_VERSION   0x00
-#define FA_REG_CTRL      0x04
-#define FA_REG_STATUS    0x08
-#define FA_REG_CRC       0x0C
-#define FA_REG_LAST_LEN  0x10
+#define FA_REG_VERSION 0x00
+#define FA_REG_CTRL 0x04
+#define FA_REG_STATUS 0x08
+#define FA_REG_CRC 0x0C
+#define FA_REG_LAST_LEN 0x10
 #define FA_REG_FRAME_CNT 0x14
 
 #define FA_CTRL_RANDOMIZER_EN BIT(0)
-#define FA_CTRL_IRQ_EN        BIT(1)
+#define FA_CTRL_IRQ_EN BIT(1)
 
-#define FA_STATUS_FRAME_DONE  BIT(0)
+#define FA_STATUS_FRAME_DONE BIT(0)
 
 #define FA_VERSION_MAJOR_SHIFT 16
-#define FA_VERSION_MINOR_MASK  GENMASK(15, 0)
+#define FA_VERSION_MINOR_MASK GENMASK(15, 0)
 
-#define FA_CRC_MASK      GENMASK(15, 0)
+#define FA_CRC_MASK GENMASK(15, 0)
 #define FA_LAST_LEN_MASK GENMASK(23, 0)
 
-struct satlink_fa_dev
-{
+struct satlink_fa_dev {
 	struct device *dev;
 	void __iomem *regs;
 	int irq;
 	struct miscdevice miscdev;
 
-	struct mutex ctrl_lock;	/* serializes GET_CTRL/SET_CTRL read-modify-write */
+	struct mutex ctrl_lock; /* serializes GET_CTRL/SET_CTRL read-modify-write */
 
-	spinlock_t stats_lock;		/* protects last_stats and frame_ready */
+	spinlock_t stats_lock; /* protects last_stats and frame_ready */
 	struct satlink_fa_frame_stats last_stats;
 	bool frame_ready;
 	wait_queue_head_t frame_wq;
 
-	struct dma_chan *dma_mm2s;	/* frame data out to the block; NULL until Stage 5 wires it */
-	struct dma_chan *dma_s2mm;	/* frame data back from the block */
+	struct dma_chan *dma_mm2s; /* frame data out to the block; NULL until Stage 5 wires it */
+	struct dma_chan *dma_s2mm; /* frame data back from the block */
 };
 
 static inline struct satlink_fa_dev *to_fa_dev(struct file *filp)
@@ -111,8 +110,7 @@ static bool satlink_fa_take_frame(struct satlink_fa_dev *fa, struct satlink_fa_f
 
 	spin_lock_irqsave(&fa->stats_lock, flags);
 	ready = fa->frame_ready;
-	if (ready)
-	{
+	if (ready) {
 		*out = fa->last_stats;
 		fa->frame_ready = false;
 	}
@@ -182,18 +180,15 @@ static long satlink_fa_ioctl_wait_frame(struct satlink_fa_dev *fa, void __user *
 	if (copy_from_user(&wf, argp, sizeof(wf)))
 		return -EFAULT;
 
-	if (wf.timeout_ms == 0)
-	{
+	if (wf.timeout_ms == 0) {
 		ret = wait_event_interruptible(fa->frame_wq, satlink_fa_take_frame(fa, &wf.stats));
 		if (ret)
 			return ret;
 		wf.timed_out = 0;
-	}
-	else
-	{
+	} else {
 		ret = wait_event_interruptible_timeout(fa->frame_wq,
-							satlink_fa_take_frame(fa, &wf.stats),
-							msecs_to_jiffies(wf.timeout_ms));
+						       satlink_fa_take_frame(fa, &wf.stats),
+						       msecs_to_jiffies(wf.timeout_ms));
 		if (ret < 0)
 			return ret;
 		wf.timed_out = (ret == 0) ? 1 : 0;
@@ -207,8 +202,7 @@ static long satlink_fa_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 	struct satlink_fa_dev *fa = to_fa_dev(filp);
 	void __user *argp = (void __user *)arg;
 
-	switch (cmd)
-	{
+	switch (cmd) {
 	case SATLINK_FA_IOC_GET_VERSION:
 		return satlink_fa_ioctl_get_version(fa, argp);
 	case SATLINK_FA_IOC_GET_CTRL:
@@ -233,17 +227,17 @@ static const struct file_operations satlink_fa_fops = {
 static void satlink_fa_request_dma(struct satlink_fa_dev *fa)
 {
 	fa->dma_mm2s = dma_request_chan(fa->dev, "mm2s");
-	if (IS_ERR(fa->dma_mm2s))
-	{
-		dev_info(fa->dev, "mm2s DMA channel not ready yet (%ld); streaming deferred to Stage 5\n",
+	if (IS_ERR(fa->dma_mm2s)) {
+		dev_info(fa->dev,
+			 "mm2s DMA channel not ready yet (%ld); streaming deferred to Stage 5\n",
 			 PTR_ERR(fa->dma_mm2s));
 		fa->dma_mm2s = NULL;
 	}
 
 	fa->dma_s2mm = dma_request_chan(fa->dev, "s2mm");
-	if (IS_ERR(fa->dma_s2mm))
-	{
-		dev_info(fa->dev, "s2mm DMA channel not ready yet (%ld); streaming deferred to Stage 5\n",
+	if (IS_ERR(fa->dma_s2mm)) {
+		dev_info(fa->dev,
+			 "s2mm DMA channel not ready yet (%ld); streaming deferred to Stage 5\n",
 			 PTR_ERR(fa->dma_s2mm));
 		fa->dma_s2mm = NULL;
 	}
@@ -284,8 +278,7 @@ static int satlink_fa_probe(struct platform_device *pdev)
 	fa->miscdev.fops = &satlink_fa_fops;
 	fa->miscdev.parent = dev;
 	ret = misc_register(&fa->miscdev);
-	if (ret)
-	{
+	if (ret) {
 		if (fa->dma_mm2s)
 			dma_release_channel(fa->dma_mm2s);
 		if (fa->dma_s2mm)
@@ -317,18 +310,17 @@ static int satlink_fa_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id satlink_fa_of_match[] = {
-	{ .compatible = "satlink,ccsds-frame-accel" },
-	{ }
-};
+	{.compatible = "satlink,ccsds-frame-accel"}, {}};
 MODULE_DEVICE_TABLE(of, satlink_fa_of_match);
 
 static struct platform_driver satlink_fa_driver = {
 	.probe = satlink_fa_probe,
 	.remove = satlink_fa_remove,
-	.driver = {
-		.name = "satlink-ccsds-frame-accel",
-		.of_match_table = satlink_fa_of_match,
-	},
+	.driver =
+		{
+			.name = "satlink-ccsds-frame-accel",
+			.of_match_table = satlink_fa_of_match,
+		},
 };
 module_platform_driver(satlink_fa_driver);
 

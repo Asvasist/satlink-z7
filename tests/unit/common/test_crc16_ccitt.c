@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "satlink/common/crc16_ccitt.h"
+
 #include "unity.h"
 
 void setUp(void) {}

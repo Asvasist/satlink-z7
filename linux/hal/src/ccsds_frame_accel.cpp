@@ -6,15 +6,12 @@
 
 #include <system_error>
 
-extern "C"
-{
+extern "C" {
 #include <satlink/ccsds_frame_accel.h>
 }
 
-namespace satlink::hal
-{
-namespace
-{
+namespace satlink::hal {
+namespace {
 
 void ThrowOnFailure(int rc, const char *what)
 {
@@ -61,8 +58,9 @@ std::optional<FrameStats> FrameAccelerator::WaitFrame(std::chrono::milliseconds 
     {
         return std::nullopt;
     }
-    return FrameStats{.crc = raw.stats.crc, .last_len_bytes = raw.stats.last_len_bytes,
-                       .frame_cnt = raw.stats.frame_cnt};
+    return FrameStats{.crc = raw.stats.crc,
+                      .last_len_bytes = raw.stats.last_len_bytes,
+                      .frame_cnt = raw.stats.frame_cnt};
 }
 
 } // namespace satlink::hal

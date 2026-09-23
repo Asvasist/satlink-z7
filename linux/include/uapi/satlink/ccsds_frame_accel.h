@@ -26,24 +26,24 @@ struct satlink_fa_version
 struct satlink_fa_ctrl
 {
     __u8 randomizer_en; /**< Non-zero: XOR frames with the CCSDS pseudo-randomizer. */
-    __u8 irq_en;         /**< Non-zero: raise an interrupt on FRAME_DONE. */
+    __u8 irq_en;        /**< Non-zero: raise an interrupt on FRAME_DONE. */
     __u8 reserved[2];
 };
 
 /** Snapshot of CRC / LAST_LEN / FRAME_CNT taken together, right after a FRAME_DONE event. */
 struct satlink_fa_frame_stats
 {
-    __u16 crc;             /**< CRC-16-CCITT of the last output frame; 0 if FECF checks out. */
+    __u16 crc; /**< CRC-16-CCITT of the last output frame; 0 if FECF checks out. */
     __u16 reserved;
-    __u32 last_len_bytes;  /**< Length of the last frame in bytes. */
-    __u32 frame_cnt;       /**< Frames processed since reset (wraps). */
+    __u32 last_len_bytes; /**< Length of the last frame in bytes. */
+    __u32 frame_cnt;      /**< Frames processed since reset (wraps). */
 };
 
 /** SATLINK_FA_IOC_WAIT_FRAME argument: block for the next FRAME_DONE, or time out. */
 struct satlink_fa_wait_frame
 {
-    __u32 timeout_ms;              /**< in: 0 blocks forever. */
-    __u32 timed_out;               /**< out: non-zero if timeout_ms elapsed with no frame. */
+    __u32 timeout_ms;                    /**< in: 0 blocks forever. */
+    __u32 timed_out;                     /**< out: non-zero if timeout_ms elapsed with no frame. */
     struct satlink_fa_frame_stats stats; /**< out: valid only when timed_out == 0. */
 };
 

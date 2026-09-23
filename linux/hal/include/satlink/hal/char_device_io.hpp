@@ -6,8 +6,7 @@
  */
 #pragma once
 
-namespace satlink::hal
-{
+namespace satlink::hal {
 
 /**
  * @brief The only thing a HAL class needs from the outside world: one ioctl-shaped call.
@@ -18,7 +17,7 @@ namespace satlink::hal
  */
 class CharDeviceIo
 {
-public:
+  public:
     virtual ~CharDeviceIo() = default;
 
     /**

@@ -4,16 +4,14 @@
  */
 #include "satlink/hal/posix_char_device.hpp"
 
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-
 #include <cerrno>
 #include <cstring>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 #include <system_error>
+#include <unistd.h>
 
-namespace satlink::hal
-{
+namespace satlink::hal {
 
 PosixCharDevice::PosixCharDevice(const std::string &path) : fd_(::open(path.c_str(), O_RDWR))
 {

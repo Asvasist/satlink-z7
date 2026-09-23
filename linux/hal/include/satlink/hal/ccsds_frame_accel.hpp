@@ -12,8 +12,7 @@
 
 #include "satlink/hal/char_device_io.hpp"
 
-namespace satlink::hal
-{
+namespace satlink::hal {
 
 struct FrameAccelVersion
 {
@@ -43,11 +42,9 @@ struct FrameStats
  */
 class FrameAccelerator
 {
-public:
+  public:
     /// @p io must outlive this object; it is not owned.
-    explicit FrameAccelerator(CharDeviceIo &io) : io_(io)
-    {
-    }
+    explicit FrameAccelerator(CharDeviceIo &io) : io_(io) {}
 
     [[nodiscard]] FrameAccelVersion GetVersion() const;
     [[nodiscard]] FrameAccelCtrl GetCtrl() const;
@@ -58,7 +55,7 @@ public:
     /// == 0 convention).
     [[nodiscard]] std::optional<FrameStats> WaitFrame(std::chrono::milliseconds timeout) const;
 
-private:
+  private:
     CharDeviceIo &io_;
 };
 

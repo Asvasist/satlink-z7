@@ -1,3 +1,22 @@
-# Kernel code follows Linux kernel style (tabs, checkpatch.pl), not the project-wide style in
-# the root .clang-format: it has to read like upstream for anyone reviewing or upstreaming it.
-BasedOnStyle: Linux
+# Kernel code follows Linux kernel style (tabs, K&R braces, checkpatch.pl), not the project-wide
+# style in the root .clang-format: it has to read like upstream for anyone reviewing it.
+BasedOnStyle: LLVM
+Language: Cpp
+IndentWidth: 8
+TabWidth: 8
+UseTab: Always
+ContinuationIndentWidth: 8
+ColumnLimit: 100
+BreakBeforeBraces: Linux
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+IndentCaseLabels: false
+AlignEscapedNewlines: Left
+BreakStringLiterals: false
+SortIncludes: Never
+IncludeBlocks: Preserve
+PointerAlignment: Right
+SpaceBeforeParens: ControlStatementsExceptControlMacros

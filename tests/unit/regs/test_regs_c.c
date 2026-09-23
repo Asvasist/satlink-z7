@@ -14,6 +14,7 @@
 #include "satlink/regs/ccsds_frame_accel.h"
 #include "satlink/regs/payload_ctrl.h"
 #include "satlink/regs/spec_tap.h"
+
 #include "unity.h"
 
 void setUp(void) {}
@@ -36,8 +37,8 @@ static void test_field_helpers_round_trip(void)
     TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFDU, reg);
     TEST_ASSERT_EQUAL_UINT32(0U, satlink_field_get(reg, PAYLOAD_CTRL_CTRL_DIG_LOOPBACK_MASK,
                                                    PAYLOAD_CTRL_CTRL_DIG_LOOPBACK_SHIFT));
-    TEST_ASSERT_EQUAL_UINT32(1U, satlink_field_get(reg, PAYLOAD_CTRL_CTRL_RX_EN_MASK,
-                                                   PAYLOAD_CTRL_CTRL_RX_EN_SHIFT));
+    TEST_ASSERT_EQUAL_UINT32(
+        1U, satlink_field_get(reg, PAYLOAD_CTRL_CTRL_RX_EN_MASK, PAYLOAD_CTRL_CTRL_RX_EN_SHIFT));
 }
 
 static void test_field_set_drops_excess_bits(void)
