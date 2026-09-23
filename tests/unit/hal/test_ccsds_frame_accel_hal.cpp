@@ -102,9 +102,10 @@ TEST(FrameAcceleratorTest, WaitFrameReturnsStatsOnSuccess)
     const std::optional<FrameStats> stats = fa.WaitFrame(std::chrono::milliseconds(100));
 
     ASSERT_TRUE(stats.has_value());
-    EXPECT_EQ(0U, stats->crc);
-    EXPECT_EQ(223U, stats->last_len_bytes);
-    EXPECT_EQ(42U, stats->frame_cnt);
+    const FrameStats got = stats.value_or(FrameStats{});
+    EXPECT_EQ(0U, got.crc);
+    EXPECT_EQ(223U, got.last_len_bytes);
+    EXPECT_EQ(42U, got.frame_cnt);
 }
 
 TEST(FrameAcceleratorTest, WaitFrameReturnsNulloptOnTimeout)
