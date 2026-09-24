@@ -34,6 +34,11 @@ if(SATLINK_TARGET MATCHES "^(host|linux)$")
     set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
+# The MicroBlaze V start-up code is assembly.
+if(SATLINK_TARGET STREQUAL "hkc")
+    enable_language(ASM)
+endif()
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -77,6 +82,10 @@ add_subdirectory(libs/hk)
 if(SATLINK_TARGET MATCHES "^(host|linux)$")
     add_subdirectory(linux/hal)
     add_subdirectory(linux/diag)
+endif()
+
+if(SATLINK_TARGET STREQUAL "hkc")
+    add_subdirectory(firmware/hkc)
 endif()
 
 if(SATLINK_BUILD_TESTS)

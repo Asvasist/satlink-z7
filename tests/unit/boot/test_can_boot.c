@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "satlink/boot/app_header.h"
 #include "satlink/boot/can_boot.h"
 #include "satlink/common/crc16_ccitt.h"
 
@@ -675,6 +676,30 @@ static void test_repeats_and_restarts_are_handled(void)
     TEST_ASSERT_EQUAL(SATLINK_CANBOOT_RX_IDLE, satlink_canboot_rx_state(&rx));
 }
 
+static void test_an_uploaded_application_image_validates_where_it_landed(void)
+{
+    /* The same image as in test_app_header.c: header from tools/hkc/mkapp.py, then the code. */
+    static const uint8_t image[31] = {0x53U, 0x4CU, 0x41U, 0x50U, 0x01U, 0x00U, 0x10U, 0x00U,
+                                      0x1FU, 0x00U, 0x00U, 0x00U, 0x4CU, 0x6CU, 0x00U, 0x00U,
+                                      0x53U, 0x61U, 0x74U, 0x4CU, 0x69U, 0x6EU, 0x6BU, 0x20U,
+                                      0x68U, 0x6BU, 0x63U, 0x20U, 0x61U, 0x70U, 0x70U};
+    sink_t sink;
+    satlink_canboot_rx_t rx;
+    satlink_canboot_tx_t tx;
+    channel_t ch = {.seed = 42U, .drop_percent = 20U, .duplicate = true};
+    size_t entry = 0U;
+
+    make_rx(&rx, &sink, 1024U, 2U);
+    fill_bytes(sink.mem, 0xEE, sizeof(sink.mem)); /* stale memory, as after a reset */
+    TEST_ASSERT_EQUAL(SATLINK_OK,
+                      satlink_canboot_tx_init(&tx, image, sizeof(image), 2U, true, 60U));
+
+    TEST_ASSERT_EQUAL(SATLINK_CANBOOT_TX_DONE, run_transfer(&tx, &rx, &ch, 20000U));
+    TEST_ASSERT_TRUE(satlink_canboot_rx_boot_requested(&rx));
+    TEST_ASSERT_EQUAL(SATLINK_OK, satlink_app_validate(sink.mem, sizeof(sink.mem), &entry));
+    TEST_ASSERT_EQUAL_UINT(16U, entry);
+}
+
 static void test_enter_is_built_for_applications_and_acknowledged_by_a_bootloader(void)
 {
     sink_t sink;
@@ -743,6 +768,7 @@ int main(void)
     RUN_TEST(test_a_failing_store_aborts_the_transfer);
     RUN_TEST(test_unknown_opcodes_and_foreign_frames);
     RUN_TEST(test_repeats_and_restarts_are_handled);
+    RUN_TEST(test_an_uploaded_application_image_validates_where_it_landed);
     RUN_TEST(test_enter_is_built_for_applications_and_acknowledged_by_a_bootloader);
     RUN_TEST(test_null_arguments);
     return UNITY_END();
