@@ -3,6 +3,7 @@
  * @brief Command logic of the satlink-diag tool.
  *
  * @implements SRS-DIAG-001
+ * @implements SRS-HKC-005
  */
 #pragma once
 
@@ -17,6 +18,7 @@ namespace satlink::diag {
 inline constexpr const char *kFrameAccelPath = "/dev/satlink-ccsds-frame-accel";
 inline constexpr const char *kSpecTapPath = "/dev/satlink-spec-tap";
 inline constexpr const char *kCodecBusPath = "/dev/i2c-0";
+inline constexpr const char *kHkcCanInterface = "can0";
 
 /// Process exit codes.
 inline constexpr int kExitOk = 0;

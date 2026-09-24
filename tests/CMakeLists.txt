@@ -32,6 +32,10 @@ satlink_add_gtest(test_diag
     SOURCES unit/hal/test_diag.cpp
     LIBS satlink::diag
 )
+satlink_add_gtest(test_hkc_link
+    SOURCES unit/hal/test_hkc_link.cpp
+    LIBS satlink::hal
+)
 
 satlink_add_unity_test(test_mcp2515
     SOURCES unit/can/test_mcp2515.c

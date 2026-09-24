@@ -1,6 +1,7 @@
 /**
  * @file diag.cpp
  * @implements SRS-DIAG-001
+ * @implements SRS-HKC-005
  */
 #include "satlink/diag/diag.hpp"
 
@@ -17,9 +18,12 @@
 #include <utility>
 #include <vector>
 
+#include "satlink/boot/can_boot.h"
 #include "satlink/hal/ccsds_frame_accel.hpp"
+#include "satlink/hal/hkc_link.hpp"
 #include "satlink/hal/spec_tap.hpp"
 #include "satlink/hal/ssm2603.hpp"
+#include "satlink/hk/telemetry.h"
 
 namespace satlink::diag {
 namespace {
@@ -39,9 +43,16 @@ constexpr const char *kUsage =
     "  codec init [wordlength=16|20|24|32]   reset and configure the audio codec\n"
     "  codec volume <0-127>                  headphone volume (121 = 0 dB)\n"
     "  codec mute on|off                     mute the DAC\n"
+    "  hkc ping                              ask the housekeeping bootloader for its state\n"
+    "  hkc enter                             restart the housekeeping application into its\n"
+    "                                        bootloader\n"
+    "  hkc upload <file> [boot=on|off]       upload an application image over CAN and start it\n"
+    "                                        (default boot=on)\n"
+    "  hkc telemetry [timeout_ms=N]          wait for one housekeeping snapshot (default 3000 ms)\n"
     "  help                                  this text\n"
     "\n"
-    "--dev overrides the device node: the char device for fa/spec, the i2c-dev node for codec.\n"
+    "--dev overrides the device node: the char device for fa/spec, the i2c-dev node for codec,\n"
+    "the CAN network interface (default can0) for hkc.\n"
     "Exit codes: 0 ok, 1 device error, 2 usage error, 3 timeout.\n";
 
 struct Options
@@ -346,6 +357,172 @@ int RunCodec(const std::string &command, Options &options, DeviceFactory &factor
     return kExitOk;
 }
 
+const char *ReceiverStateName(hal::HkcReceiverState state)
+{
+    switch (state)
+    {
+    case hal::HkcReceiverState::kIdle:
+        return "idle";
+    case hal::HkcReceiverState::kReceiving:
+        return "receiving";
+    case hal::HkcReceiverState::kVerified:
+        return "verified";
+    default:
+        return "error";
+    }
+}
+
+const char *LevelName(hal::HkcLevel level)
+{
+    switch (level)
+    {
+    case hal::HkcLevel::kOk:
+        return "ok";
+    case hal::HkcLevel::kWarn:
+        return "warn";
+    default:
+        return "alarm";
+    }
+}
+
+/// Prints @p milli (thousandths of a unit) as a decimal number with three digits.
+void PrintMilli(std::ostream &out, std::int32_t milli)
+{
+    const std::int64_t value = milli;
+    const std::int64_t magnitude = value < 0 ? -value : value;
+    out << (value < 0 ? "-" : "") << (magnitude / 1000) << '.' << std::setw(3) << std::setfill('0')
+        << (magnitude % 1000) << std::setfill(' ');
+}
+
+void PrintTelemetry(std::ostream &out, const hal::HkcTelemetry &telemetry)
+{
+    out << "temperature=";
+    PrintMilli(out, telemetry.temperature_mdegc);
+    out << " C (" << LevelName(telemetry.temperature_level) << ")\n";
+    out << "vccint=" << telemetry.vccint_mv << " mV (" << LevelName(telemetry.vccint_level)
+        << ")\n";
+    out << "vccaux=" << telemetry.vccaux_mv << " mV (" << LevelName(telemetry.vccaux_level)
+        << ")\n";
+    out << "vccbram=" << telemetry.vccbram_mv << " mV (" << LevelName(telemetry.vccbram_level)
+        << ")\n";
+    out << "uptime=" << telemetry.uptime_s
+        << " s watchdog_reset=" << (telemetry.watchdog_reset ? "yes" : "no") << '\n';
+}
+
+int RunHkc(const std::string &command, Options &options, DeviceFactory &factory, std::ostream &out)
+{
+    if (command != "ping" && command != "enter" && command != "upload" && command != "telemetry")
+    {
+        throw std::invalid_argument("unknown hkc command '" + command + "'");
+    }
+
+    std::string file;
+    bool boot = true;
+    unsigned timeout_ms = 3000;
+    if (command == "upload")
+    {
+        file = TakePositional(options, "image file");
+        if (const auto text = TakeOption(options, "boot"))
+        {
+            boot = ParseOnOff(*text, "boot");
+        }
+    }
+    else if (command == "telemetry")
+    {
+        if (const auto text = TakeOption(options, "timeout_ms"))
+        {
+            timeout_ms = ParseUnsigned(*text, 600000U, "timeout_ms");
+        }
+    }
+    RejectLeftovers(options);
+
+    const std::string interface = options.dev.empty() ? kHkcCanInterface : options.dev;
+
+    if (command == "telemetry")
+    {
+        const auto port = factory.OpenCan(
+            interface, {SATLINK_HK_ID_THERMAL, SATLINK_HK_ID_SUPPLY, SATLINK_HK_ID_STATUS});
+        hal::HkcLink link(*port);
+        const std::optional<hal::HkcTelemetry> snapshot =
+            link.ReadTelemetry(std::chrono::milliseconds(timeout_ms));
+        if (!snapshot)
+        {
+            out << "no telemetry within " << timeout_ms << " ms\n";
+            return kExitTimeout;
+        }
+        PrintTelemetry(out, *snapshot);
+        return kExitOk;
+    }
+
+    // Read the image first: a wrong file name should not need the bus.
+    std::vector<std::uint8_t> image;
+    if (command == "upload")
+    {
+        image = factory.ReadFile(file);
+        if (image.empty())
+        {
+            throw std::runtime_error("image file '" + file + "' is empty");
+        }
+    }
+
+    const auto port = factory.OpenCan(interface, {SATLINK_CANBOOT_ID_RSP});
+    hal::HkcLink link(*port);
+
+    if (command == "ping")
+    {
+        const std::optional<hal::HkcNodeInfo> info = link.Ping();
+        if (!info)
+        {
+            out << "no answer; a running application only understands 'hkc enter'\n";
+            return kExitTimeout;
+        }
+        out << "bootloader: state=" << ReceiverStateName(info->state)
+            << " protocol=" << info->protocol_version << " max_image=" << info->max_image_size
+            << '\n';
+        return kExitOk;
+    }
+
+    const std::optional<hal::HkcNodeInfo> info = link.EnterBootloader();
+    if (!info)
+    {
+        out << "no answer from the housekeeping controller on " << interface << '\n';
+        return kExitTimeout;
+    }
+    out << "bootloader ready (protocol " << info->protocol_version << ")\n";
+    if (command == "enter")
+    {
+        return kExitOk;
+    }
+
+    if (info->max_image_size != 0U && image.size() > info->max_image_size)
+    {
+        throw std::runtime_error("the image is " + std::to_string(image.size()) +
+                                 " bytes, the bootloader accepts up to " +
+                                 std::to_string(info->max_image_size));
+    }
+    out << "uploading " << image.size() << " bytes\n";
+    unsigned next_report = 0;
+    const hal::HkcUploadResult result =
+        link.Upload(image, boot, [&out, &next_report](unsigned percent) {
+            if (percent >= next_report)
+            {
+                out << "  " << percent << "%\n";
+                next_report = ((percent / 25U) + 1U) * 25U;
+            }
+        });
+    if (!result.ok)
+    {
+        if (result.node_error == SATLINK_CANBOOT_ERR_TIMEOUT)
+        {
+            out << result.message << '\n';
+            return kExitTimeout;
+        }
+        throw std::runtime_error(result.message);
+    }
+    out << result.message << '\n';
+    return kExitOk;
+}
+
 } // namespace
 
 int RunDiag(const std::vector<std::string> &args, DeviceFactory &factory, std::ostream &out,
@@ -380,6 +557,10 @@ int RunDiag(const std::vector<std::string> &args, DeviceFactory &factory, std::o
         if (args[0] == "codec")
         {
             return RunCodec(args[1], options, factory, out);
+        }
+        if (args[0] == "hkc")
+        {
+            return RunHkc(args[1], options, factory, out);
         }
         throw std::invalid_argument("unknown block '" + args[0] + "'");
     }

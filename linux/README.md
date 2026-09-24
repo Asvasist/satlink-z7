@@ -1,20 +1,23 @@
 # Linux software (Cortex-A9 Core 0)
 
 Stage 2: platform drivers for the Linux-owned PL blocks, device-tree fragments, the C++ HAL, the
-peripherals Linux owns directly, and a diagnostic tool. Stage 5 adds the payload manager on top.
+peripherals Linux owns directly, and a diagnostic tool. Stage 3 adds the CAN link to the
+housekeeping controller. Stage 5 adds the payload manager on top.
 
 ```
 drivers/ccsds_frame_accel/   platform driver: DT-bound, char device, IRQ, dmaengine
 drivers/spec_tap/            platform driver: DT-bound, char device, dmaengine
 hal/                         satlink::hal - typed C++20 wrappers (frame accelerator, spectrum
-                             tap, SSM2603 codec) over abstract CharDeviceIo / I2cBus interfaces
+                             tap, SSM2603 codec, housekeeping link) over abstract CharDeviceIo /
+                             I2cBus / CanPort interfaces
 diag/                        satlink-diag: command logic (portable) and the Linux executable
 include/uapi/satlink/        ioctl structs shared verbatim by the kernel and user space
 dts/                         PL and PS device-tree fragments and the combined board tree
 scripts/                     CAN bring-up and loopback test (can-utils)
 ```
 
-Exit criteria, design notes and the bring-up checklist: [docs/stages/stage-2.md](../docs/stages/stage-2.md).
+Exit criteria, design notes and the bring-up checklist: [docs/stages/stage-2.md](../docs/stages/stage-2.md)
+and [docs/stages/stage-3.md](../docs/stages/stage-3.md).
 
 ## satlink-diag
 
@@ -22,16 +25,20 @@ Exit criteria, design notes and the bring-up checklist: [docs/stages/stage-2.md]
 satlink-diag fa version | ctrl [randomizer=on|off] [irq=on|off] | wait [timeout_ms=N]
 satlink-diag spec version | ctrl [enable=on|off] [window=on|off] | status | clear
 satlink-diag codec init [wordlength=16|20|24|32] | volume <0-127> | mute on|off
+satlink-diag hkc ping | enter | upload <file> [boot=on|off] | telemetry [timeout_ms=N]
 ```
 
-`--dev PATH` overrides the device node. Exit codes: 0 ok, 1 device error, 2 usage error,
-3 timeout. Run `codec init` once after boot, then `codec volume` / `codec mute`.
+`--dev PATH` overrides the device node (for `hkc`: the CAN interface, default `can0`). Exit codes:
+0 ok, 1 device error, 2 usage error, 3 timeout. Run `codec init` once after boot, then
+`codec volume` / `codec mute`. `hkc upload` restarts the housekeeping application into its
+bootloader, uploads the image and starts it; see
+[firmware/hkc](../firmware/hkc/README.md).
 
 ## CAN
 
 ```bash
 linux/scripts/can-loopback-test.sh can0    # MCP2515 internal loopback, no second node needed
-linux/scripts/can-up.sh can0 500000        # normal mode, for the two-node test in Stage 3
+linux/scripts/can-up.sh can0 500000        # normal mode, for the housekeeping link (Stage 3)
 ```
 
 ## Building the kernel modules

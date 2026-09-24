@@ -6,21 +6,27 @@
 # call open()/ioctl()/write()/close().
 # @implements SRS-HAL-001
 # @implements SRS-HAL-002
+# @implements SRS-HKC-005
 
 add_library(satlink_hal STATIC
     src/ccsds_frame_accel.cpp
     src/spec_tap.cpp
     src/ssm2603.cpp
+    src/hkc_link.cpp
 )
 
 if(SATLINK_TARGET STREQUAL "linux")
     target_sources(satlink_hal PRIVATE
         src/posix_char_device.cpp
         src/i2c_dev_bus.cpp
+        src/socket_can_port.cpp
     )
 endif()
 
 add_library(satlink::hal ALIAS satlink_hal)
+
+# The housekeeping link runs the same C protocol code as the bootloader.
+target_link_libraries(satlink_hal PUBLIC satlink::boot satlink::hk)
 
 target_include_directories(satlink_hal
     PUBLIC

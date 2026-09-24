@@ -5,12 +5,15 @@
  * @verifies SRS-DIAG-001
  * @verifies SRS-HAL-001
  * @verifies SRS-PER-001
+ * @verifies SRS-HKC-005
  */
 #include <cerrno>
+#include <chrono>
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <map>
 #include <memory>
+#include <optional>
 #include <span>
 #include <sstream>
 #include <string>
@@ -18,11 +21,14 @@
 #include <utility>
 #include <vector>
 
+#include "satlink/boot/can_boot.h"
 #include "satlink/diag/device_factory.hpp"
 #include "satlink/diag/diag.hpp"
 #include "satlink/hal/char_device_io.hpp"
 #include "satlink/hal/i2c_bus.hpp"
 #include "satlink/hal/ssm2603.hpp"
+
+#include "fake_hkc_node.hpp"
 
 extern "C" {
 #include <satlink/ccsds_frame_accel.h>
@@ -152,14 +158,57 @@ class ForwardingBus final : public hal::I2cBus
     hal::I2cBus &target_;
 };
 
+class ForwardingCan final : public hal::CanPort
+{
+  public:
+    explicit ForwardingCan(hal::CanPort &target) : target_(target) {}
+    void Send(const hal::CanFrame &frame) override
+    {
+        target_.Send(frame);
+    }
+    std::optional<hal::CanFrame> Receive(std::chrono::milliseconds timeout) override
+    {
+        return target_.Receive(timeout);
+    }
+
+  private:
+    hal::CanPort &target_;
+};
+
 /// Hands out the fakes by path and remembers what was opened.
 class FakeFactory final : public DeviceFactory
 {
   public:
-    FakeFactory()
+    explicit FakeFactory(
+        hal::test::FakeHkcNode::Mode node_mode = hal::test::FakeHkcNode::Mode::kBootloader,
+        std::uint32_t node_max_image = 4096U)
+        : node(node_mode, node_max_image)
     {
         char_devices[kFrameAccelPath] = &frame_accel;
         char_devices[kSpecTapPath] = &spec_tap;
+        can_interfaces[kHkcCanInterface] = &node;
+    }
+
+    std::unique_ptr<hal::CanPort> OpenCan(const std::string &interface,
+                                          const std::vector<std::uint32_t> &accept_ids) override
+    {
+        opened_can.emplace_back(interface, accept_ids);
+        const auto found = can_interfaces.find(interface);
+        if (found == can_interfaces.end())
+        {
+            throw std::system_error(ENODEV, std::generic_category(), "CAN interface " + interface);
+        }
+        return std::make_unique<ForwardingCan>(*found->second);
+    }
+
+    std::vector<std::uint8_t> ReadFile(const std::string &path) override
+    {
+        const auto found = files.find(path);
+        if (found == files.end())
+        {
+            throw std::system_error(ENOENT, std::generic_category(), "open(" + path + ")");
+        }
+        return found->second;
     }
 
     std::unique_ptr<hal::CharDeviceIo> OpenCharDevice(const std::string &path) override
@@ -189,6 +238,11 @@ class FakeFactory final : public DeviceFactory
     std::map<std::string, hal::CharDeviceIo *> char_devices;
     std::vector<std::string> opened_char;
     std::vector<std::pair<std::string, std::uint8_t>> opened_i2c;
+
+    hal::test::FakeHkcNode node;
+    std::map<std::string, hal::CanPort *> can_interfaces;
+    std::vector<std::pair<std::string, std::vector<std::uint32_t>>> opened_can;
+    std::map<std::string, std::vector<std::uint8_t>> files;
 };
 
 struct Result
@@ -394,6 +448,186 @@ TEST(DiagTest, CodecMuteWritesOnlyTheDigitalPathRegister)
     EXPECT_EQ("DAC muted\n", result.out);
     EXPECT_EQ((std::vector<Frame>{{0x0A, 0x08}}), factory.codec_bus.frames);
     EXPECT_EQ(kExitUsageError, RunCommand(factory, {"codec", "mute"}).code);
+}
+
+// ---- hkc: the housekeeping controller over CAN --------------------------------------------
+
+using hal::test::FakeHkcNode;
+
+/// Produced by tools/hkc/mkapp.py (see test_app_header.c).
+std::vector<std::uint8_t> GoldenApp()
+{
+    return {0x53, 0x4C, 0x41, 0x50, 0x01, 0x00, 0x10, 0x00, 0x1F, 0x00, 0x00,
+            0x00, 0x4C, 0x6C, 0x00, 0x00, 0x53, 0x61, 0x74, 0x4C, 0x69, 0x6E,
+            0x6B, 0x20, 0x68, 0x6B, 0x63, 0x20, 0x61, 0x70, 0x70};
+}
+
+TEST(DiagTest, HkcPingShowsTheBootloaderState)
+{
+    FakeFactory factory;
+    const Result result = RunCommand(factory, {"hkc", "ping"});
+    EXPECT_EQ(kExitOk, result.code);
+    EXPECT_EQ("bootloader: state=idle protocol=1 max_image=4096\n", result.out);
+    ASSERT_EQ(1U, factory.opened_can.size());
+    EXPECT_EQ(kHkcCanInterface, factory.opened_can[0].first);
+    EXPECT_EQ((std::vector<std::uint32_t>{SATLINK_CANBOOT_ID_RSP}), factory.opened_can[0].second);
+}
+
+TEST(DiagTest, HkcPingOfARunningApplicationTimesOut)
+{
+    FakeFactory factory(FakeHkcNode::Mode::kApplication);
+    const Result result = RunCommand(factory, {"hkc", "ping"});
+    EXPECT_EQ(kExitTimeout, result.code);
+    EXPECT_NE(std::string::npos, result.out.find("hkc enter"));
+}
+
+TEST(DiagTest, HkcEnterBringsUpTheBootloader)
+{
+    FakeFactory factory(FakeHkcNode::Mode::kApplication);
+    const Result result = RunCommand(factory, {"hkc", "enter"});
+    EXPECT_EQ(kExitOk, result.code);
+    EXPECT_EQ("bootloader ready (protocol 1)\n", result.out);
+    EXPECT_EQ(FakeHkcNode::Mode::kBootloader, factory.node.mode());
+}
+
+TEST(DiagTest, HkcEnterWithNobodyThereTimesOut)
+{
+    FakeFactory factory(FakeHkcNode::Mode::kDead);
+    const Result result = RunCommand(factory, {"hkc", "enter"});
+    EXPECT_EQ(kExitTimeout, result.code);
+    EXPECT_NE(std::string::npos, result.out.find("no answer"));
+}
+
+TEST(DiagTest, HkcUploadRestartsTheApplicationTransfersTheImageAndStartsIt)
+{
+    FakeFactory factory(FakeHkcNode::Mode::kApplication);
+    factory.files["app.img"] = GoldenApp();
+
+    const Result result = RunCommand(factory, {"hkc", "upload", "app.img"});
+
+    EXPECT_EQ(kExitOk, result.code) << result.err;
+    EXPECT_NE(std::string::npos, result.out.find("bootloader ready (protocol 1)"));
+    EXPECT_NE(std::string::npos, result.out.find("uploading 31 bytes"));
+    EXPECT_NE(std::string::npos, result.out.find("  0%\n"));
+    EXPECT_NE(std::string::npos, result.out.find("  100%\n"));
+    EXPECT_NE(std::string::npos, result.out.find("image verified and started\n"));
+    EXPECT_EQ(GoldenApp(), factory.node.Received());
+    EXPECT_TRUE(satlink_canboot_rx_boot_requested(&factory.node.receiver()));
+}
+
+TEST(DiagTest, HkcUploadWithBootOffOnlyVerifiesTheImage)
+{
+    FakeFactory factory;
+    factory.files["app.img"] = GoldenApp();
+
+    const Result result = RunCommand(factory, {"hkc", "upload", "app.img", "boot=off"});
+
+    EXPECT_EQ(kExitOk, result.code) << result.err;
+    EXPECT_NE(std::string::npos, result.out.find("image verified\n"));
+    EXPECT_FALSE(satlink_canboot_rx_boot_requested(&factory.node.receiver()));
+}
+
+TEST(DiagTest, HkcUploadReportsAMissingFileWithoutTouchingTheBus)
+{
+    FakeFactory factory;
+    const Result result = RunCommand(factory, {"hkc", "upload", "missing.img"});
+    EXPECT_EQ(kExitRuntimeError, result.code);
+    EXPECT_NE(std::string::npos, result.err.find("missing.img"));
+    EXPECT_TRUE(factory.opened_can.empty());
+}
+
+TEST(DiagTest, HkcUploadRefusesAnEmptyFile)
+{
+    FakeFactory factory;
+    factory.files["empty.img"] = {};
+    const Result result = RunCommand(factory, {"hkc", "upload", "empty.img"});
+    EXPECT_EQ(kExitRuntimeError, result.code);
+    EXPECT_NE(std::string::npos, result.err.find("is empty"));
+    EXPECT_TRUE(factory.opened_can.empty());
+}
+
+TEST(DiagTest, HkcUploadChecksTheImageAgainstTheNodesCapacity)
+{
+    FakeFactory factory(FakeHkcNode::Mode::kBootloader, 16U);
+    factory.files["app.img"] = GoldenApp();
+    const Result result = RunCommand(factory, {"hkc", "upload", "app.img"});
+    EXPECT_EQ(kExitRuntimeError, result.code);
+    EXPECT_NE(std::string::npos, result.err.find("accepts up to 16"));
+}
+
+TEST(DiagTest, HkcUploadToADeadNodeTimesOut)
+{
+    FakeFactory factory(FakeHkcNode::Mode::kDead);
+    factory.files["app.img"] = GoldenApp();
+    EXPECT_EQ(kExitTimeout, RunCommand(factory, {"hkc", "upload", "app.img"}).code);
+}
+
+TEST(DiagTest, HkcUploadReportsACorruptedTransfer)
+{
+    FakeFactory factory;
+    factory.node.corrupt_data_frame = 2;
+    factory.files["app.img"] = GoldenApp();
+    const Result result = RunCommand(factory, {"hkc", "upload", "app.img"});
+    EXPECT_EQ(kExitRuntimeError, result.code);
+    EXPECT_NE(std::string::npos, result.err.find("CRC"));
+}
+
+TEST(DiagTest, HkcTelemetryPrintsTheSnapshot)
+{
+    FakeFactory factory(FakeHkcNode::Mode::kApplication);
+    satlink_hk_snapshot_t snapshot{};
+    snapshot.temp_mdegc = -500;
+    snapshot.vccint_mv = 1002;
+    snapshot.vccaux_mv = 1801;
+    snapshot.vccbram_mv = 999;
+    snapshot.temp_level = SATLINK_HK_ALARM;
+    snapshot.uptime_s = 77;
+    factory.node.BroadcastTelemetry(snapshot, 3);
+
+    const Result result = RunCommand(factory, {"hkc", "telemetry"});
+
+    EXPECT_EQ(kExitOk, result.code);
+    EXPECT_EQ("temperature=-0.500 C (alarm)\n"
+              "vccint=1002 mV (ok)\n"
+              "vccaux=1801 mV (ok)\n"
+              "vccbram=999 mV (ok)\n"
+              "uptime=77 s watchdog_reset=no\n",
+              result.out);
+    ASSERT_EQ(1U, factory.opened_can.size());
+    EXPECT_EQ((std::vector<std::uint32_t>{0x100U, 0x101U, 0x102U}), factory.opened_can[0].second);
+}
+
+TEST(DiagTest, HkcTelemetryTimesOutWhenTheApplicationIsSilent)
+{
+    FakeFactory factory(FakeHkcNode::Mode::kApplication);
+    const Result result = RunCommand(factory, {"hkc", "telemetry", "timeout_ms=500"});
+    EXPECT_EQ(kExitTimeout, result.code);
+    EXPECT_NE(std::string::npos, result.out.find("no telemetry within 500 ms"));
+}
+
+TEST(DiagTest, HkcDevOptionSelectsTheCanInterface)
+{
+    FakeFactory factory;
+    factory.can_interfaces["can1"] = &factory.node;
+    EXPECT_EQ(kExitOk, RunCommand(factory, {"hkc", "ping", "--dev", "can1"}).code);
+    ASSERT_EQ(1U, factory.opened_can.size());
+    EXPECT_EQ("can1", factory.opened_can[0].first);
+
+    const Result missing = RunCommand(factory, {"hkc", "ping", "--dev", "can9"});
+    EXPECT_EQ(kExitRuntimeError, missing.code);
+    EXPECT_NE(std::string::npos, missing.err.find("can9"));
+}
+
+TEST(DiagTest, HkcUsageErrors)
+{
+    FakeFactory factory;
+    EXPECT_EQ(kExitUsageError, RunCommand(factory, {"hkc"}).code);
+    EXPECT_EQ(kExitUsageError, RunCommand(factory, {"hkc", "reset"}).code);
+    EXPECT_EQ(kExitUsageError, RunCommand(factory, {"hkc", "upload"}).code);
+    EXPECT_EQ(kExitUsageError, RunCommand(factory, {"hkc", "upload", "a.img", "boot=maybe"}).code);
+    EXPECT_EQ(kExitUsageError, RunCommand(factory, {"hkc", "telemetry", "timeout_ms=x"}).code);
+    EXPECT_EQ(kExitUsageError, RunCommand(factory, {"hkc", "ping", "extra"}).code);
+    EXPECT_TRUE(factory.opened_can.empty());
 }
 
 } // namespace

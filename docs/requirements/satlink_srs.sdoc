@@ -281,13 +281,13 @@ Baseline boot chain; hardened in Stage 3.
 [REQUIREMENT]
 UID: SRS-BOOT-002
 STATUS: Draft
-TITLE: Secure A/B boot
+TITLE: Signed boot images
 STATEMENT: >>>
-U-Boot shall boot only signed FIT images, keep A and B slots, count boot attempts and roll back
-to the last good slot automatically.
+U-Boot shall boot only FIT images whose signature verifies against a public key it holds.
 <<<
 RATIONALE: >>>
-Detailed in Stage 3.
+The A/B slots, boot counting and rollback are SRS-BOOT-003. Signing needs a decision on key
+management and on where the public key lives, so it stays a draft.
 <<<
 
 [REQUIREMENT]
@@ -499,4 +499,19 @@ The slot logic shall have an executable reference model that is unit tested.
 RATIONALE: >>>
 A failed update must never leave the board unbootable. Signature checking of the images is
 SRS-BOOT-002.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-005
+STATUS: Accepted
+TITLE: Housekeeping firmware update from Linux
+STATEMENT: >>>
+The Linux diagnostic tool shall restart a running housekeeping application into its bootloader,
+upload an application image over CAN with the protocol of SRS-HKC-003 and read the housekeeping
+telemetry. The transfer logic shall be tested against the bootloader's own receiver code on a bus
+that loses, duplicates and corrupts frames.
+<<<
+RATIONALE: >>>
+Changing the housekeeping firmware needs no JTAG and no new bitstream, and the Linux side is
+checked without hardware.
 <<<
