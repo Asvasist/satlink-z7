@@ -1,0 +1,33 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          satlink-boot-confirm
+# Required-Start:    $remote_fs $network
+# Default-Start:     5 2 3 4
+# Default-Stop:
+# Short-Description: Confirm the running A/B boot slot once the system is healthy
+### END INIT INFO
+#
+# Waits CONFIRM_DELAY seconds after boot (so a crash loop is not confirmed), then lets
+# satlink-bootctl confirm the slot if its health check passes. A slot that is not confirmed is
+# abandoned by the boot script after its last allowed attempt.
+#
+# @implements SRS-BOOT-003
+
+CONFIRM_DELAY="${CONFIRM_DELAY:-30}"
+
+case "$1" in
+    start)
+        (
+            sleep "$CONFIRM_DELAY"
+            satlink-bootctl confirm 2>&1 | logger -t satlink-boot-confirm
+        ) &
+        ;;
+    stop | restart | reload | force-reload | status)
+        ;;
+    *)
+        echo "usage: $0 start" >&2
+        exit 2
+        ;;
+esac
+
+exit 0

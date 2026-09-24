@@ -1,0 +1,14 @@
+# SatLink-Z7 SD card layout with A/B root file systems (SATLINK_AB=1).
+#
+#   p1  boot   FAT   BOOT.BIN, boot.scr, uboot.env, and the kernel + device tree of each slot
+#   p2  root_a ext4  root file system of slot a (written by wic)
+#   p3  root_b ext4  root file system of slot b (empty: the first update writes it)
+#   p4  data   ext4  survives updates and rollbacks
+#
+# boot-ab.cmd and satlink-bootctl hard-code these partition numbers. A fixed root size keeps the
+# two slots interchangeable; the build fails if the root file system outgrows it.
+# @implements SRS-BOOT-003
+part /boot --source bootimg-partition --ondisk mmcblk0 --fstype=vfat --label boot --active --align 4096 --size 128M
+part / --source rootfs --ondisk mmcblk0 --fstype=ext4 --label root_a --align 4096 --fixed-size 640M
+part --ondisk mmcblk0 --fstype=ext4 --label root_b --align 4096 --fixed-size 640M
+part /data --ondisk mmcblk0 --fstype=ext4 --label data --align 4096 --size 64M

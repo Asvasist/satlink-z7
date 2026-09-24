@@ -1,0 +1,136 @@
+#!/bin/sh
+# satlink-bootctl - A/B boot slot control from Linux.
+#
+#   satlink-bootctl status        show the slot state and the running slot
+#   satlink-bootctl inactive      the slot an update should be written to, and its files
+#   satlink-bootctl begin-update  the inactive slot now holds a new image: boot it, on trial
+#   satlink-bootctl mark-good     the running slot is healthy: end the trial
+#   satlink-bootctl confirm       mark-good, but only if the health check passes
+#
+# The state is kept in the U-Boot environment (uboot.env on the boot partition) and read and
+# written with fw_printenv / fw_setenv; boot-ab.cmd does the boot-time half. The logic is the
+# reference model libs/boot/src/ab_slot.c, and the variable writes are ordered so that a power
+# loss between two of them never leaves an unconfirmed slot without a rollback path.
+#
+# FW_PRINTENV, FW_SETENV, CMDLINE_FILE and SATLINK_HEALTH_CMD can be overridden (the unit tests
+# do). Exit codes: 0 ok, 1 failure or unhealthy, 2 refused (usage or state).
+#
+# @implements SRS-BOOT-003
+set -eu
+
+FW_PRINTENV="${FW_PRINTENV:-fw_printenv}"
+FW_SETENV="${FW_SETENV:-fw_setenv}"
+CMDLINE_FILE="${CMDLINE_FILE:-/proc/cmdline}"
+SATLINK_HEALTH_CMD="${SATLINK_HEALTH_CMD:-pidof sshd}"
+
+get() {
+    # shellcheck disable=SC2086  # FW_PRINTENV may be a command with arguments
+    $FW_PRINTENV -n "$1" 2>/dev/null || true
+}
+
+put() {
+    # shellcheck disable=SC2086
+    $FW_SETENV "$1" "$2"
+}
+
+other_slot() {
+    if [ "$1" = "a" ]; then
+        echo b
+    else
+        echo a
+    fi
+}
+
+rootpart_of() {
+    if [ "$1" = "b" ]; then
+        echo 3
+    else
+        echo 2
+    fi
+}
+
+running_slot() {
+    sed -n 's/.*satlink\.slot=\([ab]\).*/\1/p' "$CMDLINE_FILE" 2>/dev/null | head -n 1
+}
+
+load_state() {
+    boot_slot="$(get boot_slot)"
+    prev_slot="$(get prev_slot)"
+    bootcount="$(get bootcount)"
+    bootlimit="$(get bootlimit)"
+    upgrade_available="$(get upgrade_available)"
+    if [ -z "$boot_slot" ]; then
+        echo "satlink-bootctl: no slot state in the U-Boot environment; boot once with boot-ab.cmd first" >&2
+        exit 2
+    fi
+}
+
+cmd_status() {
+    load_state
+    echo "boot_slot=$boot_slot"
+    echo "prev_slot=$prev_slot"
+    echo "bootcount=$bootcount"
+    echo "bootlimit=$bootlimit"
+    echo "upgrade_available=$upgrade_available"
+    echo "running_slot=$(running_slot)"
+}
+
+cmd_inactive() {
+    load_state
+    slot="$(other_slot "$boot_slot")"
+    echo "slot=$slot rootpart=$(rootpart_of "$slot") kernel=zImage.$slot dtb=system-$slot.dtb"
+}
+
+cmd_mark_good() {
+    load_state
+    # Same as satlink_ab_mark_good(): the trial ends last, so an interruption leaves it running.
+    put prev_slot "$boot_slot"
+    put bootcount 0
+    put upgrade_available 0
+    echo "slot $boot_slot confirmed"
+}
+
+cmd_begin_update() {
+    load_state
+    if [ "$upgrade_available" = "1" ]; then
+        echo "satlink-bootctl: slot $boot_slot is still on trial; confirm it or let it roll back first" >&2
+        exit 2
+    fi
+    new="$(other_slot "$boot_slot")"
+    # Same as satlink_ab_begin_update(). The slot switch is last: if power fails earlier, the
+    # old slot boots on and the pending trial flag clears itself after bootlimit boots.
+    put bootcount 0
+    put prev_slot "$boot_slot"
+    put upgrade_available 1
+    put boot_slot "$new"
+    echo "next boot: slot $new, on trial (fallback: slot $boot_slot)"
+}
+
+cmd_confirm() {
+    load_state
+    if [ "$upgrade_available" != "1" ]; then
+        echo "slot $boot_slot is not on trial"
+        return 0
+    fi
+    # shellcheck disable=SC2086
+    if $SATLINK_HEALTH_CMD >/dev/null 2>&1; then
+        cmd_mark_good
+    else
+        echo "satlink-bootctl: health check failed, slot $boot_slot stays on trial" >&2
+        exit 1
+    fi
+}
+
+usage() {
+    sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//' >&2
+    exit 2
+}
+
+case "${1:-}" in
+    status) cmd_status ;;
+    inactive) cmd_inactive ;;
+    begin-update) cmd_begin_update ;;
+    mark-good) cmd_mark_good ;;
+    confirm) cmd_confirm ;;
+    *) usage ;;
+esac

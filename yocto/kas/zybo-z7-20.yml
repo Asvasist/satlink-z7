@@ -2,6 +2,8 @@
 #   kas build yocto/kas/zybo-z7-20.yml
 # PREEMPT_RT kernel fragment:
 #   SATLINK_RT=1 kas build yocto/kas/zybo-z7-20.yml
+# A/B root file systems with boot counting and rollback (Stage 3):
+#   SATLINK_AB=1 kas build yocto/kas/zybo-z7-20.yml
 header:
   version: 14
   includes:

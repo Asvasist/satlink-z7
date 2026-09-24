@@ -22,3 +22,6 @@ IMAGE_INSTALL += " \
     devmem2 \
     htop \
 "
+
+# A/B boot flow (SATLINK_AB=1): slot control and the post-boot confirmation.
+IMAGE_INSTALL += "${@'satlink-bootctl' if d.getVar('SATLINK_AB') == '1' else ''}"
