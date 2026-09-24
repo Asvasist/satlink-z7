@@ -79,7 +79,7 @@ jobs:
       - name: cppcheck (blocking)
         run: |
           cppcheck --project=build/host-tidy/compile_commands.json \
-                   --file-filter='*/libs/*' \
+                   --file-filter='libs/*' \
                    --enable=warning,style,performance,portability \
                    --inline-suppr --suppress=missingIncludeSystem \
                    --error-exitcode=1
@@ -87,7 +87,7 @@ jobs:
         continue-on-error: true
         run: |
           cppcheck --project=build/host-tidy/compile_commands.json \
-                   --file-filter='*/libs/common/*' --addon=misra \
+                   --file-filter='libs/common/*' --addon=misra \
                    --suppress=missingIncludeSystem \
                    --output-file=misra-report.txt
           cat misra-report.txt
