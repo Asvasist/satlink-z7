@@ -3,9 +3,9 @@
 
 Generated from `@implements` / `@verifies` tags in the source tree.
 
-- Requirements: 35 (31 accepted)
-- Accepted and implemented: 29 / 31
-- Accepted and verified by an automated test: 15 / 31
+- Requirements: 40 (36 accepted)
+- Accepted and implemented: 33 / 36
+- Accepted and verified by an automated test: 19 / 36
 
 | UID | Title | Status | Implemented by | Verified by |
 |---|---|---|---|---|
@@ -17,6 +17,7 @@ Generated from `@implements` / `@verifies` tags in the source tree.
 | SRS-BLD-006 | Reproducible Linux build | Accepted | `.github/workflows/yocto.yml`<br>`yocto/kas/satlink-base.yml` | - |
 | SRS-BOOT-001 | Stage 1 boot chain | Accepted | `yocto/meta-satlink/recipes-bsp/satlink-boot-scr/files/boot.cmd`<br>`yocto/meta-satlink/recipes-bsp/satlink-boot-scr/satlink-boot-scr.bb`<br>`yocto/meta-satlink/recipes-bsp/u-boot/u-boot-xlnx_%.bbappend`<br>`yocto/meta-satlink/wic/satlink-sd.wks` | - |
 | SRS-BOOT-002 | Secure A/B boot | Draft | - | - |
+| SRS-BOOT-003 | A/B boot slots with rollback | Accepted | `libs/boot/CMakeLists.txt`<br>`libs/boot/include/satlink/boot/ab_slot.h`<br>`libs/boot/src/ab_slot.c` | `tests/unit/boot/test_ab_slot.c` |
 | SRS-BSP-001 | Yocto BSP layer | Accepted | `yocto/meta-satlink/conf/layer.conf`<br>`yocto/meta-satlink/conf/machine/zybo-z7-20.conf` | - |
 | SRS-BSP-002 | Kernel configuration | Accepted | `yocto/meta-satlink/recipes-kernel/linux/files/preempt-rt.cfg`<br>`yocto/meta-satlink/recipes-kernel/linux/files/satlink.cfg`<br>`yocto/meta-satlink/recipes-kernel/linux/linux-xlnx_%.bbappend` | - |
 | SRS-BSP-003 | Board boot | Accepted | `yocto/meta-satlink/recipes-core/images/satlink-image.bb` | - |
@@ -30,6 +31,10 @@ Generated from `@implements` / `@verifies` tags in the source tree.
 | SRS-DRV-004 | DMA through dmaengine | Accepted | `linux/drivers/ccsds_frame_accel/ccsds_frame_accel_drv.c`<br>`linux/drivers/spec_tap/spec_tap_drv.c` | - |
 | SRS-HAL-001 | C++ HAL over the char device | Accepted | `linux/hal/CMakeLists.txt`<br>`linux/hal/include/satlink/hal/block_version.hpp`<br>`linux/hal/include/satlink/hal/ccsds_frame_accel.hpp`<br>`linux/hal/include/satlink/hal/spec_tap.hpp`<br>`linux/hal/src/ccsds_frame_accel.cpp`<br>`linux/hal/src/spec_tap.cpp` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp`<br>`tests/unit/hal/test_diag.cpp`<br>`tests/unit/hal/test_spec_tap_hal.cpp` |
 | SRS-HAL-002 | HAL testable without hardware | Accepted | `linux/hal/CMakeLists.txt`<br>`linux/hal/include/satlink/hal/char_device_io.hpp`<br>`linux/hal/include/satlink/hal/i2c_bus.hpp`<br>`linux/hal/include/satlink/hal/i2c_dev_bus.hpp`<br>`linux/hal/include/satlink/hal/posix_char_device.hpp`<br>`linux/hal/src/i2c_dev_bus.cpp`<br>`linux/hal/src/posix_char_device.cpp` | `tests/unit/hal/test_ccsds_frame_accel_hal.cpp`<br>`tests/unit/hal/test_spec_tap_hal.cpp`<br>`tests/unit/hal/test_ssm2603_hal.cpp` |
+| SRS-HKC-001 | Housekeeping monitoring and supervision | Accepted | `libs/hk/CMakeLists.txt`<br>`libs/hk/include/satlink/hk/limits.h`<br>`libs/hk/include/satlink/hk/supervisor.h`<br>`libs/hk/include/satlink/hk/telemetry.h`<br>`libs/hk/include/satlink/hk/xadc.h`<br>`libs/hk/src/limits.c`<br>`libs/hk/src/supervisor.c`<br>`libs/hk/src/telemetry.c`<br>`libs/hk/src/xadc.c` | `tests/unit/hk/test_hk.c` |
+| SRS-HKC-002 | CAN controller driver | Accepted | `libs/can/CMakeLists.txt`<br>`libs/can/include/satlink/can/can_frame.h`<br>`libs/can/include/satlink/can/mcp2515.h`<br>`libs/can/src/mcp2515.c` | `tests/unit/can/test_mcp2515.c` |
+| SRS-HKC-003 | Firmware upload over CAN | Accepted | `libs/boot/CMakeLists.txt`<br>`libs/boot/include/satlink/boot/app_header.h`<br>`libs/boot/include/satlink/boot/can_boot.h`<br>`libs/boot/src/app_header.c`<br>`libs/boot/src/can_boot.c`<br>`tools/hkc/mkapp.py` | `tests/unit/boot/test_app_header.c`<br>`tests/unit/boot/test_can_boot.c`<br>`tools/hkc/tests/test_mkapp.py` |
+| SRS-HKC-004 | Housekeeping firmware images | Accepted | - | - |
 | SRS-ICD-001 | Register maps as single source of truth | Accepted | `icd/regmap/ccsds_frame_accel.yaml`<br>`icd/regmap/payload_ctrl.yaml`<br>`icd/regmap/spec_tap.yaml`<br>`libs/regs/CMakeLists.txt`<br>`libs/regs/include/satlink/regdef.h`<br>`libs/regs/include/satlink/regdef.hpp`<br>`tools/regmap/regmap_gen.py` | `tests/unit/regs/test_regdef.cpp`<br>`tests/unit/regs/test_regs_c.c`<br>`tools/regmap/tests/test_regmap_gen.py` |
 | SRS-ICD-002 | Register map validation | Accepted | `tools/regmap/regmap_gen.py` | `tools/regmap/tests/test_regmap_gen.py` |
 | SRS-ICD-003 | Address and interrupt map | Accepted | `icd/address_map.yaml`<br>`tools/regmap/regmap_gen.py` | `tests/unit/regs/test_regs_c.c`<br>`tools/regmap/tests/test_regmap_gen.py` |

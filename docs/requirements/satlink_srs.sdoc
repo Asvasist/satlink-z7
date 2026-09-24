@@ -429,3 +429,74 @@ against mocks.
 RATIONALE: >>>
 First thing to run on a fresh board, and its logic is checked in CI without hardware.
 <<<
+
+[REQUIREMENT]
+UID: SRS-HKC-001
+STATUS: Accepted
+TITLE: Housekeeping monitoring and supervision
+STATEMENT: >>>
+The housekeeping controller shall sample the die temperature and the internal supplies from the
+XADC, evaluate them against warning and alarm limits with hysteresis, supervise its own tasks with
+a watchdog that is only kicked while every required task reports in, and broadcast the result as
+CAN telemetry.
+<<<
+RATIONALE: >>>
+The Linux system needs an independent view of the payload's health that keeps working when Linux
+does not.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-002
+STATUS: Accepted
+TITLE: CAN controller driver
+STATEMENT: >>>
+The housekeeping controller shall drive the MCP2515 on PmodCAN #2 through a driver that builds SPI
+transactions for a caller-supplied transfer function, works by polling, uses no dynamic memory and
+computes the bit timing from the oscillator frequency and the requested bit rate.
+<<<
+RATIONALE: >>>
+The same driver runs against a simulator in the unit tests and against AXI Quad SPI on the board.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-003
+STATUS: Accepted
+TITLE: Firmware upload over CAN
+STATEMENT: >>>
+The housekeeping application shall be loaded into LMB memory by a bootloader over CAN using a
+sequenced, acknowledged protocol that survives lost, duplicated and reordered frames; the whole
+image shall be verified with a CRC-16-CCITT before it may be started, and an image already in
+memory shall be started only if the CRC in its header is valid.
+<<<
+RATIONALE: >>>
+Lets Linux update the housekeeping firmware without a new bitstream, and makes a corrupted upload
+impossible to boot.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-004
+STATUS: Accepted
+TITLE: Housekeeping firmware images
+STATEMENT: >>>
+The bootloader shall fit in the 16 KiB bootloader region and the application in the 112 KiB
+application region of the LMB memory given by the ICD; the linker scripts shall enforce both, and
+the application image shall carry the header written by tools/hkc/mkapp.py.
+<<<
+RATIONALE: >>>
+An image that does not fit must fail the build, not the board.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BOOT-003
+STATUS: Accepted
+TITLE: A/B boot slots with rollback
+STATEMENT: >>>
+The boot script shall keep an A and a B slot for kernel and root file system, count the boot
+attempts of a slot that is on trial after an update, fall back to the previous slot once a limited
+number of attempts was not confirmed, and Linux shall confirm the running slot when it is healthy.
+The slot logic shall have an executable reference model that is unit tested.
+<<<
+RATIONALE: >>>
+A failed update must never leave the board unbootable. Signature checking of the images is
+SRS-BOOT-002.
+<<<
