@@ -96,10 +96,13 @@ host/            ground station (Qt), Rust CLI, HIL tests                      (
 hw/              Vivado block design Tcl, RTL, constraints, filter coefficients
 icd/             interface control: address map and register maps (YAML)
 libs/common/     portable C11 library (CRC-16, CCSDS randomizer, ...)
+libs/can/        MCP2515 CAN driver and CAN frame type                          (Stage 3)
+libs/boot/       CAN firmware-upload protocol, image header, A/B slot model     (Stage 3)
+libs/hk/         XADC, limits, watchdog supervisor, telemetry frames            (Stage 3)
 libs/regs/       generated register headers (C and C++)
 linux/           kernel drivers, C++ HAL, satlink-diag, payload manager        (Stage 2, 5)
 tests/           unit tests
-tools/           register-map generator, traceability matrix
+tools/           register-map generator, traceability matrix, hkc image tool, U-Boot simulator
 yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOOT.BIN recipe
 ```
 
@@ -126,12 +129,13 @@ yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOO
 |---|---|---|
 | 1 | Foundation and BSP: build system, CI, requirements, ICD, Yocto layer, boot | **in progress** |
 | 2 | Linux drivers, C++ HAL, diagnostics, board bring-up | **in progress** |
-| 3 | Housekeeping MCU, CAN bootloader, secure A/B boot | planned |
+| 3 | Housekeeping MCU, CAN bootloader, A/B boot with rollback | **in progress** |
 | 4 | AMP and real-time modem (FreeRTOS, FEC, synchronization) | planned |
 | 5 | Adaptive link (ACM, LEO pass emulation) and on-board networking | planned |
 | 6 | SCPI server, Qt ground station, Rust CLI, HIL tests, performance report | planned |
 
-Stage 1 exit criteria and checklist: [docs/stages/stage-1.md](docs/stages/stage-1.md).
+Stage exit criteria and checklists: [stage 1](docs/stages/stage-1.md),
+[stage 2](docs/stages/stage-2.md), [stage 3](docs/stages/stage-3.md).
 Full architecture (arc42 + ADRs): [docs/architecture](docs/architecture/README.md).
 
 ## Project status
@@ -155,6 +159,15 @@ with 43 mock-based unit tests, the `satlink-diag` tool, device-tree fragments, C
 scripts and Yocto recipes. What remains is on the hardware side: the first kernel and image
 build, then bring-up with the hw-v1 bitstream. Details and checklist:
 [docs/stages/stage-2.md](docs/stages/stage-2.md).
+
+Stage 3 is written and verified as far as a host can: the MCP2515 driver, the CAN upload
+protocol, the housekeeping logic (XADC, limits, watchdog supervisor, telemetry), the bootloader and
+application firmware for the MicroBlaze V (built with the RISC-V toolchain), the Linux side of the
+update (`satlink-diag hkc`) and the A/B boot logic with rollback, tested with a U-Boot script
+simulator. Every piece runs in unit tests against real code from the other side of its interface.
+What remains is the hardware: the hw-v1 bitstream with the housekeeping subsystem, the first
+Yocto build of the A/B image, and signed images. Details and checklist:
+[docs/stages/stage-3.md](docs/stages/stage-3.md).
 
 ## Hardware
 

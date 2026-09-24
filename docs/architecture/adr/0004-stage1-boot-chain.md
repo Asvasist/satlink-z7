@@ -1,6 +1,6 @@
 # ADR-0004: Stage 1 boot chain
 
-- Status: Accepted (revisit in Stage 3)
+- Status: Accepted (Stage 3 added A/B slots, see ADR-0006; FSBL, bitstream and signed images remain open)
 - Date: 2026-09-22
 
 ## Context

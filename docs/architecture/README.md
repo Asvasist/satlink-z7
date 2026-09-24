@@ -66,6 +66,7 @@ Ownership of every peripheral, interrupt and DDR region: [address map](../icd/ge
 | Linux platform drivers | C (kernel) | linux | 2 |
 | HAL (`satlink::hal`) | C++20 | linux | 2 |
 | MCU firmware + bootloader | C11 | hkc | 3 |
+| CAN driver, upload protocol, housekeeping logic (`libs/can`, `libs/boot`, `libs/hk`) | C11, no malloc | hkc, linux, host | 3 |
 | Modem firmware | C11 | rtos | 4 |
 | Payload manager | C++20 | linux | 5 |
 | SCPI server | C++20 | linux | 6 |
@@ -87,3 +88,5 @@ Ownership of every peripheral, interrupt and DDR region: [address map](../icd/ge
 | [0002](adr/0002-icd-yaml-single-source.md) | ICD YAML files are the single source of truth |
 | [0003](adr/0003-amp-resource-ownership.md) | AMP with exclusive resource ownership |
 | [0004](adr/0004-stage1-boot-chain.md) | Stage 1 boot chain: FSBL from Vitis, U-Boot and Linux from Yocto |
+| [0005](adr/0005-can-firmware-upload.md) | Firmware upload to the housekeeping controller over CAN |
+| [0006](adr/0006-ab-boot-slots-in-uboot-env.md) | A/B boot slots kept in the U-Boot environment |
