@@ -117,6 +117,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ninja-build ${{ matrix.packages }}
       - run: cmake --preset ${{ matrix.preset }}
       - run: cmake --build --preset ${{ matrix.preset }}
+      - name: Upload firmware images
+        if: matrix.preset != 'linux-arm'
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.preset }}
+          path: |
+            build/${{ matrix.preset }}/firmware/**/*.elf
+            build/${{ matrix.preset }}/firmware/**/*.bin
+            build/${{ matrix.preset }}/firmware/**/*.slhk
+            build/${{ matrix.preset }}/firmware/**/*.map
+          if-no-files-found: ignore
 
   python-tools:
     name: ICD + traceability checks

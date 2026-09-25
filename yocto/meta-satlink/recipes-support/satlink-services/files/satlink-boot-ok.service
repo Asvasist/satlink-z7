@@ -1,0 +1,16 @@
+# Ends an A/B boot trial once the system is healthy. If it is not, reboot: U-Boot counts the
+# boot and rolls back after bootlimit attempts.
+# @implements SRS-BOOT-002
+[Unit]
+Description=SatLink-Z7 confirm the running boot slot
+After=multi-user.target
+ConditionPathExists=/boot/sd/uboot.env
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/satlink-bootctl confirm
+FailureAction=reboot
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=multi-user.target

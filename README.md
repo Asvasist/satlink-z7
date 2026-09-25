@@ -126,7 +126,7 @@ yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOO
 |---|---|---|
 | 1 | Foundation and BSP: build system, CI, requirements, ICD, Yocto layer, boot | **in progress** |
 | 2 | Linux drivers, C++ HAL, diagnostics, board bring-up | **in progress** |
-| 3 | Housekeeping MCU, CAN bootloader, secure A/B boot | planned |
+| 3 | Housekeeping MCU, CAN bootloader, secure A/B boot | **software done**, hardware pending ([details](docs/stages/stage-3.md)) |
 | 4 | AMP and real-time modem (FreeRTOS, FEC, synchronization) | planned |
 | 5 | Adaptive link (ACM, LEO pass emulation) and on-board networking | planned |
 | 6 | SCPI server, Qt ground station, Rust CLI, HIL tests, performance report | planned |

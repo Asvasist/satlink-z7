@@ -70,10 +70,21 @@ message(STATUS "SatLink-Z7 ${PROJECT_VERSION} (${SATLINK_GIT_REVISION}) target=$
 
 add_subdirectory(libs/common)
 add_subdirectory(libs/regs)
+add_subdirectory(libs/hkc_proto)
+add_subdirectory(libs/mcp2515)
+
+if(SATLINK_TARGET MATCHES "^(host|hkc)$")
+    add_subdirectory(firmware/hkc/app_logic)
+endif()
+if(SATLINK_TARGET STREQUAL "hkc")
+    add_subdirectory(firmware/hkc)
+endif()
 
 if(SATLINK_TARGET MATCHES "^(host|linux)$")
     add_subdirectory(linux/hal)
     add_subdirectory(linux/diag)
+    add_subdirectory(linux/hkc)
+    add_subdirectory(linux/bootctl)
 endif()
 
 if(SATLINK_BUILD_TESTS)

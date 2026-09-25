@@ -1,0 +1,16 @@
+# Brings up PmodCAN #1 (MCP2515 on PS SPI1) as can0 at 500 kbit/s: the housekeeping bus.
+# @implements SRS-PER-002
+[Unit]
+Description=SatLink-Z7 CAN housekeeping bus (can0)
+After=sys-subsystem-net-devices-can0.device
+BindsTo=sys-subsystem-net-devices-can0.device
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/ip link set can0 type can bitrate 500000 restart-ms 100
+ExecStart=/sbin/ip link set can0 up
+ExecStop=/sbin/ip link set can0 down
+
+[Install]
+WantedBy=multi-user.target

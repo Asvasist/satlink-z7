@@ -1,0 +1,20 @@
+# Loads the housekeeping controller application over CAN at boot. The MicroBlaze V bootloader
+# lives in the bitstream; the application image is part of the Linux root file system, so it is
+# updated together with the A/B slot.
+# @implements SRS-HKC-006
+[Unit]
+Description=SatLink-Z7 load the housekeeping controller firmware
+After=satlink-can0.service
+Requires=satlink-can0.service
+ConditionPathExists=/lib/firmware/satlink/hkc_app.slhk
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# If the application is already running (warm Linux reboot), send it to the bootloader first.
+ExecStartPre=-/usr/bin/satlink-hkc enter-boot
+ExecStart=/usr/bin/satlink-hkc flash /lib/firmware/satlink/hkc_app.slhk --boot
+ExecStartPost=/usr/bin/satlink-hkc time-sync
+
+[Install]
+WantedBy=multi-user.target

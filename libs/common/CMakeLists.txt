@@ -7,6 +7,7 @@ configure_file(include/satlink/common/version.h.in
 add_library(satlink_common STATIC
     src/crc16_ccitt.c
     src/ccsds_randomizer.c
+    src/crc32.c
 )
 add_library(satlink::common ALIAS satlink_common)
 

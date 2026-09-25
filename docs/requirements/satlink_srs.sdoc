@@ -219,6 +219,18 @@ The same code runs on Linux, FreeRTOS, the MicroBlaze V and the host test build.
 <<<
 
 [REQUIREMENT]
+UID: SRS-LIB-004
+STATUS: Accepted
+TITLE: CRC-32
+STATEMENT: >>>
+The common library shall provide CRC-32 (IEEE 802.3, reflected, initial value and final XOR
+0xFFFFFFFF) for firmware image checks, bit-compatible with zlib's crc32().
+<<<
+RATIONALE: >>>
+Host tools can compute image checksums with standard libraries.
+<<<
+
+[REQUIREMENT]
 UID: SRS-BSP-001
 STATUS: Accepted
 TITLE: Yocto BSP layer
@@ -280,14 +292,29 @@ Baseline boot chain; hardened in Stage 3.
 
 [REQUIREMENT]
 UID: SRS-BOOT-002
-STATUS: Draft
+STATUS: Accepted
 TITLE: Secure A/B boot
 STATEMENT: >>>
-U-Boot shall boot only signed FIT images, keep A and B slots, count boot attempts and roll back
-to the last good slot automatically.
+U-Boot shall boot only signed FIT images, keep A and B slots, count boot attempts of a slot on
+trial and roll back to the other slot automatically once the boot limit is exceeded. Linux shall
+end a trial only after the system reached a healthy state, and shall install updates only into
+the slot that is not running.
 <<<
 RATIONALE: >>>
-Detailed in Stage 3.
+An update must never leave the payload unbootable, and an unsigned or corrupted kernel must
+never run.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BOOT-003
+STATUS: Accepted
+TITLE: Golden image fallback
+STATEMENT: >>>
+The SD card shall hold a read-only golden copy of the factory root file system that updates
+never modify. U-Boot shall boot it when both slots have failed.
+<<<
+RATIONALE: >>>
+Last line of defence: the payload stays reachable for a new update even after two bad slots.
 <<<
 
 [REQUIREMENT]
@@ -428,4 +455,85 @@ against mocks.
 <<<
 RATIONALE: >>>
 First thing to run on a fresh board, and its logic is checked in CI without hardware.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-001
+STATUS: Accepted
+TITLE: Housekeeping controller firmware
+STATEMENT: >>>
+The MicroBlaze V shall run bare-metal firmware that owns the XADC, the timebase watchdog, the
+switches and RGB LED, and PmodCAN #2 through its own MCP2515 driver over AXI Quad SPI. The
+MCP2515 driver shall be portable C with the SPI transfer injected, so it is unit-tested against
+a register-level model of the chip.
+<<<
+RATIONALE: >>>
+A housekeeping sub-controller independent of Linux, as on real payloads; the CAN driver is
+written, not borrowed, and verified without hardware.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-002
+STATUS: Accepted
+TITLE: CAN bootloader
+STATEMENT: >>>
+A bootloader in BRAM shall load the housekeeping application over CAN, verify it (transport
+CRC, image header and payload CRC, load address and entry point) before it can be started, and
+tolerate lost frames and responses without corrupting the image.
+<<<
+RATIONALE: >>>
+Firmware of the sub-controller is updated in the field over the bus it already has.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-003
+STATUS: Accepted
+TITLE: Housekeeping CAN protocol
+STATEMENT: >>>
+Housekeeping telemetry (temperature, supply voltages, status), commands with acknowledgements
+and time synchronisation shall be exchanged over CAN at 500 kbit/s with 11-bit identifiers,
+defined once in a portable C library used by the firmware and by Linux.
+<<<
+RATIONALE: >>>
+One definition on both ends of the bus.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-004
+STATUS: Accepted
+TITLE: Firmware image format
+STATEMENT: >>>
+Housekeeping application images shall carry a header with magic, load address, entry point,
+size, version, payload CRC-32 and header CRC-32; the build shall produce such images and the
+bootloader and Linux tools shall check them.
+<<<
+RATIONALE: >>>
+A wrong or damaged image is rejected before it runs.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-005
+STATUS: Accepted
+TITLE: Housekeeping application behaviour
+STATEMENT: >>>
+The housekeeping application shall send telemetry at a commandable period (100 ms to 10 s,
+default 1 s), latch XADC alarms and CAN errors until cleared, blink a heartbeat LED, and enter
+the bootloader on a keyed command. Its logic shall be free of register access and unit-tested
+on the host.
+<<<
+RATIONALE: >>>
+Predictable, testable behaviour of the sub-controller.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-006
+STATUS: Accepted
+TITLE: Linux housekeeping tool
+STATEMENT: >>>
+A Linux tool shall monitor housekeeping telemetry, send commands and load application images
+over SocketCAN, retrying requests whose response is lost. At boot a service shall load the
+application image shipped in the root file system.
+<<<
+RATIONALE: >>>
+Operators and the boot sequence use the same tested client.
 <<<

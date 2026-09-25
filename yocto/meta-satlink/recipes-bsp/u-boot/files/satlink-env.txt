@@ -1,0 +1,31 @@
+# SatLink-Z7 default U-Boot environment (CONFIG_USE_DEFAULT_ENV_FILE).
+#
+# A/B boot with boot counting, rollback and a golden image:
+#   bootcmd     boots ${boot_slot}. The kernel is a signed FIT image inside the slot's root
+#               file system, so kernel, device tree and root file system are updated together.
+#   altbootcmd  runs instead of bootcmd once bootcount > bootlimit while upgrade_available=1.
+#               First time: switch to the other slot and set rollback=1. Second time (the other
+#               slot fails too): boot the golden image, the read-only factory copy on
+#               mmcblk0p5 that updates never touch.
+#   Linux ends a trial with "satlink-bootctl confirm" (satlink-boot-ok.service).
+#
+# Only the variables in CONFIG_ENV_FLAGS_LIST_STATIC can be changed from uboot.env, so editing
+# the file on the FAT partition cannot change the boot commands.
+# linux/bootctl models this logic; tests/unit/boot/test_boot_control.cpp checks both agree.
+# @implements SRS-BOOT-002
+# @implements SRS-BOOT-003
+boot_slot=a
+bootlimit=3
+bootcount=0
+upgrade_available=0
+rollback=0
+loadaddr=0x10000000
+slot_a_part=2
+slot_b_part=3
+golden_part=5
+satlink_select=if test "${boot_slot}" = "b"; then setenv rootpart ${slot_b_part}; else setenv rootpart ${slot_a_part}; fi
+satlink_args=setenv bootargs console=ttyPS0,115200 earlycon root=/dev/mmcblk0p${rootpart} rw rootwait satlink.slot=${boot_slot}
+satlink_boot=run satlink_select; ext4load mmc 0:${rootpart} ${loadaddr} /boot/fitImage && run satlink_args && bootm ${loadaddr}
+satlink_golden=echo "SatLink: booting the golden image"; ext4load mmc 0:${golden_part} ${loadaddr} /boot/fitImage && setenv bootargs console=ttyPS0,115200 earlycon root=/dev/mmcblk0p${golden_part} ro rootwait satlink.slot=golden && bootm ${loadaddr}
+bootcmd=run satlink_boot; echo "SatLink: slot ${boot_slot} did not boot"; run satlink_golden
+altbootcmd=if test "${rollback}" = "1"; then run satlink_golden; fi; if test "${boot_slot}" = "a"; then setenv boot_slot b; else setenv boot_slot a; fi; setenv rollback 1; setenv bootcount 0; saveenv; echo "SatLink: rolled back to slot ${boot_slot}"; run satlink_boot; run satlink_golden
