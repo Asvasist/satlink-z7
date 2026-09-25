@@ -68,3 +68,39 @@ satlink_add_gtest(test_boot_control
 )
 target_compile_definitions(test_boot_control PRIVATE
     SATLINK_UBOOT_ENV_FILE="${PROJECT_SOURCE_DIR}/yocto/meta-satlink/recipes-bsp/u-boot/files/satlink-env.txt")
+
+# Stage 4: software modem.
+satlink_add_gtest(test_conv
+    SOURCES unit/modem/test_conv.cpp
+    LIBS satlink::modem
+)
+satlink_add_gtest(test_mapper_frame
+    SOURCES unit/modem/test_mapper_frame.cpp
+    LIBS satlink::modem
+)
+satlink_add_gtest(test_receiver
+    SOURCES unit/modem/test_receiver.cpp
+    LIBS satlink::modem
+)
+satlink_add_gtest(test_ipc_ring
+    SOURCES unit/amp/test_ipc_ring.cpp
+    LIBS satlink::amp
+)
+satlink_add_gtest(test_msg
+    SOURCES unit/amp/test_msg.cpp
+    LIBS satlink::amp
+)
+find_package(Threads REQUIRED)
+target_link_libraries(test_ipc_ring PRIVATE Threads::Threads)
+satlink_add_gtest(test_modem_app
+    SOURCES unit/modem/test_modem_app.cpp
+    LIBS satlink::modem_app
+)
+satlink_add_gtest(test_axi_dma
+    SOURCES unit/rtos/test_axi_dma.cpp
+    LIBS rtos::axi_dma
+)
+satlink_add_gtest(test_modem_client
+    SOURCES unit/amp/test_modem_client.cpp
+    LIBS satlink::amp_client
+)

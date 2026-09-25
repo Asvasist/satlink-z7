@@ -3,12 +3,19 @@
 
 Generated from `@implements` / `@verifies` tags in the source tree.
 
-- Requirements: 43 (40 accepted)
-- Accepted and implemented: 38 / 40
-- Accepted and verified by an automated test: 24 / 40
+- Requirements: 57 (54 accepted)
+- Accepted and implemented: 52 / 54
+- Accepted and verified by an automated test: 37 / 54
 
 | UID | Title | Status | Implemented by | Verified by |
 |---|---|---|---|---|
+| SRS-AMP-001 | FreeRTOS firmware on Core 1 | Accepted | `firmware/rtos/CMakeLists.txt`<br>`firmware/rtos/app/main.c`<br>`firmware/rtos/app/modem_task.c`<br>`firmware/rtos/bsp/gic.c`<br>`firmware/rtos/bsp/syscalls.c`<br>`firmware/rtos/bsp/timer.c`<br>`firmware/rtos/bsp/uart.c`<br>`firmware/rtos/include/FreeRTOSConfig.h`<br>`firmware/rtos/include/rtos/bsp.h`<br>`firmware/rtos/include/rtos/tasks.h`<br>`firmware/rtos/include/version.h`<br>`linux/drivers/satlink_amp/satlink,amp.yaml`<br>`linux/drivers/satlink_amp/satlink_amp_drv.c`<br>`yocto/meta-satlink/recipes-bsp/satlink-rtos-firmware/satlink-rtos-firmware_1.0.bb`<br>`yocto/meta-satlink/recipes-kernel/satlink-amp/satlink-amp_1.0.bb` | `tools/rtos/qemu_selftest.py` |
+| SRS-AMP-002 | Inter-core message rings | Accepted | `firmware/rtos/app/ipc.c`<br>`firmware/rtos/include/rtos/ipc.h`<br>`libs/amp/CMakeLists.txt`<br>`libs/amp/include/satlink/amp/ipc_ring.h`<br>`libs/amp/include/satlink/amp/shm.h`<br>`libs/amp/src/ipc_ring.c`<br>`linux/drivers/satlink_amp/ipc_ring_kernel.c`<br>`linux/drivers/satlink_amp/satlink_amp_drv.c` | `tests/unit/amp/test_ipc_ring.cpp` |
+| SRS-AMP-003 | Message set and Linux interface | Accepted | `libs/amp/include/satlink/amp/msg.h`<br>`libs/amp/src/msg.c`<br>`linux/amp/CMakeLists.txt`<br>`linux/amp/include/satlink/amp_client/amp_device.hpp`<br>`linux/amp/include/satlink/amp_client/message_port.hpp`<br>`linux/amp/include/satlink/amp_client/modem_client.hpp`<br>`linux/amp/src/amp_device.cpp`<br>`linux/amp/src/amp_tool.cpp`<br>`linux/amp/src/modem_client.cpp`<br>`linux/include/uapi/satlink/amp.h` | `tests/unit/amp/test_modem_client.cpp`<br>`tests/unit/amp/test_msg.cpp`<br>`tests/unit/modem/test_modem_app.cpp` |
+| SRS-AMP-004 | Memory isolation | Accepted | `firmware/rtos/bsp/mmu.c`<br>`linux/dts/zybo-z7-satlink-amp.dtsi` | `firmware/rtos/app/monitor.c` |
+| SRS-AMP-005 | Firmware fault detection and recovery | Accepted | `firmware/rtos/app/monitor.c`<br>`firmware/rtos/bsp/fault.c`<br>`linux/drivers/satlink_amp/satlink_amp_drv.c` | - |
+| SRS-AMP-006 | Modem DMA streams | Accepted | `firmware/rtos/app/payload.c`<br>`firmware/rtos/dma/CMakeLists.txt`<br>`firmware/rtos/dma/include/rtos/axi_dma.h`<br>`firmware/rtos/dma/src/axi_dma.c`<br>`firmware/rtos/include/rtos/payload.h` | `tests/unit/rtos/test_axi_dma.cpp` |
+| SRS-AMP-007 | AMP testable without hardware | Accepted | `firmware/rtos/app/monitor.c`<br>`linux/amp/include/satlink/amp_client/simulated_core1.hpp`<br>`linux/amp/src/simulated_core1.cpp` | `tests/unit/amp/test_modem_client.cpp`<br>`tools/rtos/qemu_selftest.py` |
 | SRS-BLD-001 | Single build system | Accepted | `CMakeLists.txt`<br>`cmake/toolchains/arm-linux-gnueabihf.cmake`<br>`cmake/toolchains/arm-none-eabi-cortex-a9.cmake`<br>`cmake/toolchains/riscv-microblaze-v.cmake` | - |
 | SRS-BLD-002 | Warning-free code | Accepted | `cmake/modules/SatlinkBuildOptions.cmake` | - |
 | SRS-BLD-003 | Continuous integration | Accepted | `.github/workflows/ci.yml` | - |
@@ -45,10 +52,17 @@ Generated from `@implements` / `@verifies` tags in the source tree.
 | SRS-LIB-002 | CCSDS pseudo-randomizer | Accepted | `libs/common/include/satlink/common/ccsds_randomizer.h`<br>`libs/common/src/ccsds_randomizer.c` | `tests/unit/common/test_ccsds_randomizer.c` |
 | SRS-LIB-003 | Portable common library | Accepted | `libs/common/CMakeLists.txt`<br>`libs/common/include/satlink/common/byte_order.h`<br>`libs/common/include/satlink/common/status.h` | - |
 | SRS-LIB-004 | CRC-32 | Accepted | `libs/common/include/satlink/common/crc32.h`<br>`libs/common/src/crc32.c` | `tests/unit/common/test_crc32.c` |
+| SRS-MDM-001 | Forward error correction | Accepted | `libs/modem/CMakeLists.txt`<br>`libs/modem/include/satlink/modem/conv.h`<br>`libs/modem/src/conv.c` | `tests/unit/modem/test_conv.cpp` |
+| SRS-MDM-002 | Modulations and MODCOD table | Accepted | `libs/modem/include/satlink/modem/mapper.h`<br>`libs/modem/include/satlink/modem/modcod.h`<br>`libs/modem/include/satlink/modem/types.h`<br>`libs/modem/src/mapper.c`<br>`libs/modem/src/modcod.c` | `tests/unit/modem/test_mapper_frame.cpp` |
+| SRS-MDM-003 | Pulse shaping | Accepted | `libs/modem/include/satlink/modem/rrc.h`<br>`libs/modem/src/rrc.c` | `tests/unit/modem/test_receiver.cpp` |
+| SRS-MDM-004 | Physical-layer frame | Accepted | `libs/modem/include/satlink/modem/frame.h`<br>`libs/modem/include/satlink/modem/prbs.h`<br>`libs/modem/src/frame.c`<br>`libs/modem/src/prbs.c` | `tests/unit/modem/test_mapper_frame.cpp` |
+| SRS-MDM-005 | Receiver performance | Accepted | `libs/modem/include/satlink/modem/receiver.h`<br>`libs/modem/src/receiver.c` | `tests/unit/modem/test_receiver.cpp` |
+| SRS-MDM-006 | Channel model | Accepted | `libs/modem/include/satlink/modem/channel.h`<br>`libs/modem/src/channel.c` | `tests/unit/modem/test_receiver.cpp` |
+| SRS-MDM-007 | Modem application | Accepted | `firmware/rtos/app/modem_task.c`<br>`libs/modem_app/CMakeLists.txt`<br>`libs/modem_app/include/satlink/modem_app/modem_app.h`<br>`libs/modem_app/src/modem_app.c` | `tests/unit/modem/test_modem_app.cpp` |
 | SRS-PER-001 | Audio codec configuration from Linux | Accepted | `linux/dts/zybo-z7-satlink-ps.dtsi`<br>`linux/hal/include/satlink/hal/ssm2603.hpp`<br>`linux/hal/src/ssm2603.cpp` | `tests/unit/hal/test_diag.cpp`<br>`tests/unit/hal/test_ssm2603_hal.cpp` |
 | SRS-PER-002 | CAN through SocketCAN | Accepted | `linux/dts/zybo-z7-satlink-ps.dtsi`<br>`linux/hal/include/satlink/hal/socket_can_bus.hpp`<br>`linux/hal/src/socket_can_bus.cpp`<br>`linux/scripts/can-up.sh` | `linux/scripts/can-loopback-test.sh` |
 | SRS-SYS-001 | Processor partitioning | Accepted | - | - |
-| SRS-SYS-002 | Exclusive resource ownership | Accepted | `icd/address_map.yaml` | `tools/regmap/tests/test_regmap_gen.py` |
+| SRS-SYS-002 | Exclusive resource ownership | Accepted | `icd/address_map.yaml`<br>`linux/dts/zybo-z7-satlink-amp.dtsi` | `tools/regmap/tests/test_regmap_gen.py` |
 | SRS-SYS-003 | Telecommand and telemetry interface | Draft | - | - |
 | SRS-SYS-004 | Instrument control interface | Draft | - | - |
 | SRS-SYS-005 | Adaptive coding and modulation | Draft | - | - |

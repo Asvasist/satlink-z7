@@ -6,3 +6,4 @@
 #include "zynq-zybo-z7.dts"
 #include "zybo-z7-satlink-ps.dtsi"
 #include "zybo-z7-satlink-pl.dtsi"
+#include "zybo-z7-satlink-amp.dtsi"

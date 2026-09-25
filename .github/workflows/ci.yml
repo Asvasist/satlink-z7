@@ -129,6 +129,61 @@ jobs:
             build/${{ matrix.preset }}/firmware/**/*.map
           if-no-files-found: ignore
 
+  rtos-qemu:
+    name: Core 1 firmware self-test in QEMU
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain and QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi qemu-system-arm
+      - run: cmake --preset rtos-a9
+      - run: cmake --build --preset rtos-a9
+      # @implements SRS-BLD-003
+      - name: Boot FreeRTOS on the emulated Zynq and run the modem self-test
+        run: python3 tools/rtos/qemu_selftest.py build/rtos-a9/firmware/rtos/satlink_rtos.elf --timeout 300
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rtos-qemu-log
+          path: build/rtos-a9/firmware/rtos/qemu-selftest.log
+          if-no-files-found: ignore
+
+  kernel:
+    name: kernel modules + device trees (linux-xlnx 6.6)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf flex bison bc libssl-dev libelf-dev
+      - name: Fetch and prepare the kernel (xilinx_zynq_defconfig)
+        run: |
+          git clone --depth 1 -b xlnx_rebase_v6.6_LTS https://github.com/Xilinx/linux-xlnx.git "$RUNNER_TEMP/linux"
+          cd "$RUNNER_TEMP/linux"
+          make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- xilinx_zynq_defconfig
+          ./scripts/config --enable CONFIG_CAN --module CONFIG_CAN_MCP251X --enable CONFIG_XILINX_DMA \
+                           --enable CONFIG_HOTPLUG_CPU --enable CONFIG_MFD_SYSCON
+          make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- olddefconfig modules_prepare -j"$(nproc)"
+      # Compile-only (no Module.symvers without a full kernel build): warnings are errors.
+      - name: Build the out-of-tree modules
+        run: |
+          for d in ccsds_frame_accel spec_tap satlink_amp; do
+            make -C linux/drivers/$d KERNEL_SRC="$RUNNER_TEMP/linux" ARCH=arm \
+                 CROSS_COMPILE=arm-linux-gnueabihf- W=1 KBUILD_MODPOST_WARN=1 \
+                 KCFLAGS=-Werror
+          done
+      - name: Build the board device trees
+        run: |
+          dts="$RUNNER_TEMP/linux/arch/arm/boot/dts/xilinx"
+          cp linux/dts/*.dts linux/dts/*.dtsi "$dts/"
+          for t in zynq-zybo-z7-satlink-amp zynq-zybo-z7-satlink; do
+            echo "dtb-\$(CONFIG_ARCH_ZYNQ) += $t.dtb" >> "$dts/Makefile"
+            make -C "$RUNNER_TEMP/linux" ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- W=1 xilinx/$t.dtb
+          done
+
   python-tools:
     name: ICD + traceability checks
     runs-on: ubuntu-24.04

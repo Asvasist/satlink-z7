@@ -57,7 +57,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_spi1_default>, <&pinctrl_can_int_default>;
 
-	can0: can@0 {
+	mcp2515_can: can@0 {
 		compatible = "microchip,mcp2515";
 		reg = <0>;
 		clocks = <&can_osc>;

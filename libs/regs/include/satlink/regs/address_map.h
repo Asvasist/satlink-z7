@@ -89,6 +89,13 @@
 #define SATLINK_PS_PS_TTC1_IRQ_TIMER1 (70U)
 #define SATLINK_PS_PS_TTC1_IRQ_TIMER2 (71U)
 
+/* SCU, GIC, global and private timers. Each OS routes only its own SPIs; the IPC interrupts are unused PL lines (IRQ_F2P[8], [9]) that each core pends in software (ADR-0005) [owner: shared, fixed] */
+#define SATLINK_PS_MPCORE_BASE (0xF8F00000U)
+#define SATLINK_PS_MPCORE_SIZE (0x00002000U)
+#define SATLINK_PS_MPCORE_IRQ_PTIMER (29U)
+#define SATLINK_PS_MPCORE_IRQ_IPC_TO_RTOS (84U)
+#define SATLINK_PS_MPCORE_IRQ_IPC_TO_LINUX (85U)
+
 /* System watchdog (FDIR, Stage 6) [owner: linux, fixed] */
 #define SATLINK_PS_PS_SWDT_BASE (0xF8005000U)
 #define SATLINK_PS_PS_SWDT_SIZE (0x00001000U)
@@ -149,9 +156,9 @@
 #define SATLINK_DDR_RTOS_FW_BASE (0x38000000U)
 #define SATLINK_DDR_RTOS_FW_SIZE (0x01000000U)
 
-/* OpenAMP vrings and RPMsg buffers (1 MiB) [owner: shared, provisional] */
-#define SATLINK_DDR_RPMSG_SHM_BASE (0x39000000U)
-#define SATLINK_DDR_RPMSG_SHM_SIZE (0x00100000U)
+/* AMP control block and the two IPC message rings (1 MiB, libs/amp/shm.h) [owner: shared, provisional] */
+#define SATLINK_DDR_IPC_SHM_BASE (0x39000000U)
+#define SATLINK_DDR_IPC_SHM_SIZE (0x00100000U)
 
 /* Modem DMA buffer descriptors and sample buffers (15 MiB) [owner: rtos, provisional] */
 #define SATLINK_DDR_MODEM_DMA_BASE (0x39100000U)

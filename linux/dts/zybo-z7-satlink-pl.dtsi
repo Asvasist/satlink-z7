@@ -33,14 +33,14 @@
 			xlnx,addrwidth = <32>;
 			xlnx,include-sg;
 
-			dma-channel@40410000 {
+			dma-channel-mm2s {
 				compatible = "xlnx,axi-dma-mm2s-channel";
 				interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
 				xlnx,datawidth = <8>;
 				xlnx,device-id = <0>;
 			};
 
-			dma-channel@40410030 {
+			dma-channel-s2mm {
 				compatible = "xlnx,axi-dma-s2mm-channel";
 				interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 				xlnx,datawidth = <8>;
@@ -58,7 +58,7 @@
 			xlnx,addrwidth = <32>;
 			xlnx,include-sg;
 
-			dma-channel@40420030 {
+			dma-channel-s2mm {
 				compatible = "xlnx,axi-dma-s2mm-channel";
 				interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
 				xlnx,datawidth = <32>;

@@ -48,7 +48,7 @@ flowchart TB
         FFT["spec_tap + FFT"]
         MCU["MicroBlaze V: housekeeping"]
     end
-    Core0 <-- "RPMsg (shared DDR)" --> Core1
+    Core0 <-- "IPC rings (shared DDR)" --> Core1
     Core1 -- "axi_dma_modem, payload_ctrl" --> DP
     Core0 -- "axi_dma_frame" --> FA
     Core0 -- "axi_dma_spec" --> FFT
@@ -66,7 +66,9 @@ Ownership of every peripheral, interrupt and DDR region: [address map](../icd/ge
 | Linux platform drivers | C (kernel) | linux | 2 |
 | HAL (`satlink::hal`) | C++20 | linux | 2 |
 | MCU firmware + bootloader | C11 | hkc | 3 |
-| Modem firmware | C11 | rtos | 4 |
+| Modem library, modem application, IPC | C11 | all | 4 |
+| Modem firmware (FreeRTOS BSP, tasks) | C11 | rtos | 4 |
+| AMP driver | C (kernel) | linux | 4 |
 | Payload manager | C++20 | linux | 5 |
 | SCPI server | C++20 | linux | 6 |
 | Ground station / CLI / HIL tests | C++/Qt, Rust, Python | host | 6 |
@@ -76,7 +78,8 @@ Ownership of every peripheral, interrupt and DDR region: [address map](../icd/ge
 - **Error handling (C):** functions return `satlink_status_t`; no dynamic memory in firmware.
 - **Register access:** only through generated headers; never raw offsets in code.
 - **Reference models:** every PL datapath has a C or MATLAB golden model with unit tests.
-- **Time:** Linux is the time master; FreeRTOS and the MCU receive time via RPMsg/CAN (Stage 4).
+- **Time:** Linux is the time master; FreeRTOS and the MCU receive it in TIME messages (IPC) and
+  TIME_SYNC frames (CAN).
 - **Logging:** Linux uses journald; FreeRTOS and MCU log to their UART consoles.
 
 ## 6. Decisions
@@ -87,3 +90,4 @@ Ownership of every peripheral, interrupt and DDR region: [address map](../icd/ge
 | [0002](adr/0002-icd-yaml-single-source.md) | ICD YAML files are the single source of truth |
 | [0003](adr/0003-amp-resource-ownership.md) | AMP with exclusive resource ownership |
 | [0004](adr/0004-stage1-boot-chain.md) | Stage 1 boot chain: FSBL from Vitis, U-Boot and Linux from Yocto |
+| [0005](adr/0005-amp-without-remoteproc.md) | AMP with an own loader driver and shared-memory rings instead of remoteproc/RPMsg |

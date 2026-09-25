@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * AMP partitioning (icd/address_map.yaml, ADR-0003, ADR-0005): the DDR regions Core 1 owns are
+ * reserved and never mapped by Linux, the satlink_amp driver runs the modem firmware on CPU1,
+ * and the peripherals the firmware owns are disabled here.
+ *
+ * Doorbells: IRQ 84 (Linux -> RTOS) and IRQ 85 (RTOS -> Linux) are PL-to-PS lines IRQ_F2P[8]
+ * and IRQ_F2P[9], unused by the PL design; each side sets them pending in the GIC. GIC SPI
+ * number = IRQ - 32.
+ *
+ * Needs no PL, so it is part of both board device trees.
+ *
+ * @implements SRS-AMP-004
+ * @implements SRS-SYS-002
+ */
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		rtos_fw: rtos-fw@38000000 {
+			reg = <0x38000000 0x01000000>;
+			no-map;
+		};
+
+		ipc_shm: ipc-shm@39000000 {
+			reg = <0x39000000 0x00100000>;
+			no-map;
+		};
+
+		modem_dma: modem-dma@39100000 {
+			reg = <0x39100000 0x00f00000>;
+			no-map;
+		};
+	};
+
+	satlink_amp: satlink-amp {
+		compatible = "satlink,amp";
+		memory-region = <&rtos_fw>, <&ipc_shm>, <&modem_dma>;
+		memory-region-names = "rtos_fw", "ipc_shm", "modem_dma";
+		interrupt-parent = <&intc>;
+		interrupts = <GIC_SPI 53 IRQ_TYPE_EDGE_RISING>, <GIC_SPI 52 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "to-linux", "to-rtos";
+		syscon = <&slcr>;
+		satlink,auto-boot;
+	};
+};
+
+/* TTC1 is the firmware's profiling timer; UART0 (its console) is disabled in zynq-7000.dtsi. */
+&ttc1 {
+	status = "disabled";
+};

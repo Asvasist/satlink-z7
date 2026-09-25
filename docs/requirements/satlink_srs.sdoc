@@ -57,7 +57,8 @@ STATEMENT: >>>
 The modem shall switch between MODCODs at frame boundaries based on the measured link quality.
 <<<
 RATIONALE: >>>
-Core function of a software-defined telecom payload. Detailed in Stages 4 and 5.
+Core function of a software-defined telecom payload. The physical layer supports it from
+Stage 4 (the MODCOD is signalled in every frame header); the controller follows in Stage 5.
 <<<
 
 [REQUIREMENT]
@@ -175,7 +176,7 @@ UID: SRS-ICD-004
 STATUS: Accepted
 TITLE: AMP memory partitioning
 STATEMENT: >>>
-The ICD shall define non-overlapping DDR partitions for Linux, FreeRTOS, RPMsg shared memory and
+The ICD shall define non-overlapping DDR partitions for Linux, FreeRTOS, the IPC shared memory and
 modem DMA buffers, all inside physical DDR.
 <<<
 RATIONALE: >>>
@@ -536,4 +537,188 @@ application image shipped in the root file system.
 <<<
 RATIONALE: >>>
 Operators and the boot sequence use the same tested client.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-001
+STATUS: Accepted
+TITLE: Forward error correction
+STATEMENT: >>>
+The modem shall use the CCSDS K = 7 rate 1/2 convolutional code (131.0-B) with the CCSDS
+puncturing patterns for rates 2/3, 3/4, 5/6 and 7/8, terminated blocks, and a soft-decision
+Viterbi decoder.
+<<<
+RATIONALE: >>>
+Standard space channel code with a well-known performance; soft decisions gain about 2 dB.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-002
+STATUS: Accepted
+TITLE: Modulations and MODCOD table
+STATEMENT: >>>
+The modem shall support Gray-mapped BPSK, QPSK and 8PSK with unit symbol energy and max-log
+soft demapping, combined into at least five MODCODs ordered by spectral efficiency, each with an
+Es/N0 threshold.
+<<<
+RATIONALE: >>>
+Range of operating points for adaptive coding and modulation.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-003
+STATUS: Accepted
+TITLE: Pulse shaping
+STATEMENT: >>>
+Symbols shall be shaped with a root-raised-cosine filter (roll-off 0.35, span 8 symbols, unit
+energy); the software model shall provide the taps for the PL filters and for simulation.
+<<<
+RATIONALE: >>>
+Band-limited signal without inter-symbol interference after matched filtering.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-004
+STATUS: Accepted
+TITLE: Physical-layer frame
+STATEMENT: >>>
+Every frame shall start with the CCSDS ASM (BPSK) and a CRC-protected, repetition-coded BPSK
+header that announces MODCOD, frame type and sequence number, followed by a randomized,
+CRC-16-protected, FEC-coded 128-byte payload with pilot blocks every 512 payload symbols.
+Without data the transmitter shall send idle frames with a known PN9 payload.
+<<<
+RATIONALE: >>>
+The receiver learns each frame's MODCOD before its payload arrives (frame-by-frame ACM), and idle
+frames give a continuous bit error rate measurement.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-005
+STATUS: Accepted
+TITLE: Receiver performance
+STATEMENT: >>>
+The receiver shall acquire and track symbol timing, frame timing and carrier phase from an
+unknown start, decode at least 22 of 25 frames of each MODCOD at 1 dB above its Es/N0 threshold
+in AWGN, and estimate Es/N0 within 1.5 dB.
+<<<
+RATIONALE: >>>
+Verifiable link performance; the Es/N0 estimate drives ACM.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-006
+STATUS: Accepted
+TITLE: Channel model
+STATEMENT: >>>
+A seeded channel model shall apply gain, carrier phase and frequency offset, fractional timing
+offset and complex AWGN at a given Es/N0.
+<<<
+RATIONALE: >>>
+Reproducible link tests without hardware; the same model drives the software loopback.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-007
+STATUS: Accepted
+TITLE: Modem application
+STATEMENT: >>>
+The Core 1 modem application shall accept configuration, channel, ACM, time and TX frame
+messages, queue TX frames, send idle frames when the queue is empty, forward received data
+frames, report status once per second, and run a software loopback when the PL datapath is not
+used. It shall contain no OS or register access.
+<<<
+RATIONALE: >>>
+The same code runs in the firmware, in the payload simulator and in unit tests.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-001
+STATUS: Accepted
+TITLE: FreeRTOS firmware on Core 1
+STATEMENT: >>>
+Linux shall load the FreeRTOS modem firmware from the root file system into the rtos_fw
+partition, start it on Cortex-A9 Core 1 and see it report RUNNING within 2 s. The firmware shall
+not initialise resources Linux owns (L2 cache controller, SCU, GIC distributor).
+<<<
+RATIONALE: >>>
+Hard-real-time modem control beside a general-purpose OS on one chip.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-002
+STATUS: Accepted
+TITLE: Inter-core message rings
+STATEMENT: >>>
+Linux and the firmware shall exchange messages through two lock-free single-producer /
+single-consumer rings in the shared partition, with interrupt doorbells in both directions. The
+ring implementation shall be one source file used by the kernel driver, the firmware and the
+host tests.
+<<<
+RATIONALE: >>>
+No drift between the two sides of the protocol; the transport is testable on the host.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-003
+STATUS: Accepted
+TITLE: Message set and Linux interface
+STATEMENT: >>>
+The message set between Linux and the firmware shall be defined once in a C library with
+encoders and decoders; Linux user space shall use it through a character device and a typed C++
+client.
+<<<
+RATIONALE: >>>
+One definition of every message; applications never handle raw bytes.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-004
+STATUS: Accepted
+TITLE: Memory isolation
+STATEMENT: >>>
+Linux shall reserve every DDR region Core 1 owns as no-map memory, and the firmware's MMU shall
+map only the regions and peripherals the address map gives to the RTOS or to both; any other
+access from Core 1 shall fault.
+<<<
+RATIONALE: >>>
+A stray pointer on one core must not corrupt the other OS.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-005
+STATUS: Accepted
+TITLE: Firmware fault detection and recovery
+STATEMENT: >>>
+The firmware shall report aborts, failed assertions, stack overflows and heap exhaustion in the
+shared control block and keep a heartbeat; Linux shall restart Core 1 after a fault report or a
+heartbeat stalled for 3 s.
+<<<
+RATIONALE: >>>
+FDIR: the modem recovers without a reboot of the payload.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-006
+STATUS: Accepted
+TITLE: Modem DMA streams
+STATEMENT: >>>
+The firmware shall stream TX symbols to and RX samples from the PL through the AXI DMA in
+scatter-gather mode with interrupt-driven descriptor rings, count underruns and overruns, and
+keep descriptors and buffers in non-cacheable memory.
+<<<
+RATIONALE: >>>
+Continuous real-time streams without CPU copies of every sample and without cache maintenance.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-007
+STATUS: Accepted
+TITLE: AMP testable without hardware
+STATEMENT: >>>
+The firmware shall run a self-test through its own IPC rings when no Linux is present, and CI
+shall boot it in QEMU's Zynq-7000 machine; a simulated Core 1 running the modem application
+shall be available to Linux-side software on the host.
+<<<
+RATIONALE: >>>
+The port, scheduler, MMU, interrupts and IPC are verified on every push, not only on the board.
 <<<

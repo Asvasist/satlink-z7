@@ -13,6 +13,7 @@ IMAGE_INSTALL += " \
     kernel-modules \
     satlink-ccsds-frame-accel \
     satlink-spec-tap \
+    satlink-amp \
     satlink-tools \
     satlink-services \
     ${@'kernel-image-fitimage' if d.getVar('SATLINK_SECURE_BOOT') == '1' else ''} \

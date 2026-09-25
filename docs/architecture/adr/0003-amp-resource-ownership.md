@@ -13,7 +13,7 @@ peripheral and all of DDR, and nothing stops them from interfering with each oth
 Every peripheral, PL block, interrupt and DDR region has exactly one owner in
 `icd/address_map.yaml`. Linux disables (device tree `status = "disabled"`) or reserves
 (`reserved-memory`, `no-map`) everything it does not own. Shared data goes only through the
-RPMsg shared-memory partition. The interrupt distributor is configured by Linux; FreeRTOS only
+IPC shared-memory partition (ADR-0005). The interrupt distributor is configured by Linux; FreeRTOS only
 routes its own interrupts to Core 1.
 
 ## Consequences

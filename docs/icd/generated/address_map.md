@@ -26,6 +26,7 @@ Zynq PS address space as seen by the Cortex-A9 cores (PL blocks via M_AXI_GP0)
 | `0xE0100000` | `0x1000` | ps_sd0 | linux | sd = 56 | fixed | SD card (boot + root filesystem) |
 | `0xF8002000` | `0x1000` | ps_ttc1 | rtos | timer0 = 69, timer1 = 70, timer2 = 71 | fixed | FreeRTOS profiling timer |
 | `0xF8005000` | `0x1000` | ps_swdt | linux | wdt = 41 | fixed | System watchdog (FDIR, Stage 6) |
+| `0xF8F00000` | `0x2000` | mpcore | shared | ptimer = 29, ipc_to_rtos = 84, ipc_to_linux = 85 | fixed | SCU, GIC, global and private timers. Each OS routes only its own SPIs; the IPC interrupts are unused PL lines (IRQ_F2P[8], [9]) that each core pends in software (ADR-0005) |
 
 ## Space `hkc`
 
@@ -49,6 +50,6 @@ MicroBlaze V (housekeeping controller) data address space
 |---|---|---|---|---|---|
 | `0x00000000` | `0x38000000` | linux | linux | provisional | Linux kernel and user space (896 MiB) |
 | `0x38000000` | `0x1000000` | rtos_fw | rtos | provisional | FreeRTOS image, heap and stacks (16 MiB) |
-| `0x39000000` | `0x100000` | rpmsg_shm | shared | provisional | OpenAMP vrings and RPMsg buffers (1 MiB) |
+| `0x39000000` | `0x100000` | ipc_shm | shared | provisional | AMP control block and the two IPC message rings (1 MiB, libs/amp/shm.h) |
 | `0x39100000` | `0xF00000` | modem_dma | rtos | provisional | Modem DMA buffer descriptors and sample buffers (15 MiB) |
 | `0x3A000000` | `0x6000000` | reserved | shared | provisional | Reserved for later stages (96 MiB) |

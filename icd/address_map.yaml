@@ -53,6 +53,9 @@ spaces:
          irqs: {sd: 56}, description: "SD card (boot + root filesystem)"}
       - {name: ps_ttc1, base: 0xF8002000, size: 0x00001000, owner: rtos, status: fixed,
          irqs: {timer0: 69, timer1: 70, timer2: 71}, description: "FreeRTOS profiling timer"}
+      - {name: mpcore, base: 0xF8F00000, size: 0x00002000, owner: shared, status: fixed,
+         irqs: {ptimer: 29, ipc_to_rtos: 84, ipc_to_linux: 85},
+         description: "SCU, GIC, global and private timers. Each OS routes only its own SPIs; the IPC interrupts are unused PL lines (IRQ_F2P[8], [9]) that each core pends in software (ADR-0005)"}
       - {name: ps_swdt, base: 0xF8005000, size: 0x00001000, owner: linux, status: fixed,
          irqs: {wdt: 41}, description: "System watchdog (FDIR, Stage 6)"}
 
@@ -85,8 +88,8 @@ ddr_partitions:
      description: "Linux kernel and user space (896 MiB)"}
   - {name: rtos_fw, base: 0x38000000, size: 0x01000000, owner: rtos, status: provisional,
      description: "FreeRTOS image, heap and stacks (16 MiB)"}
-  - {name: rpmsg_shm, base: 0x39000000, size: 0x00100000, owner: shared, status: provisional,
-     description: "OpenAMP vrings and RPMsg buffers (1 MiB)"}
+  - {name: ipc_shm, base: 0x39000000, size: 0x00100000, owner: shared, status: provisional,
+     description: "AMP control block and the two IPC message rings (1 MiB, libs/amp/shm.h)"}
   - {name: modem_dma, base: 0x39100000, size: 0x00F00000, owner: rtos, status: provisional,
      description: "Modem DMA buffer descriptors and sample buffers (15 MiB)"}
   - {name: reserved, base: 0x3A000000, size: 0x06000000, owner: shared, status: provisional,

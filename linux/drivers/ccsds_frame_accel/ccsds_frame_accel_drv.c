@@ -290,7 +290,7 @@ static int satlink_fa_probe(struct platform_device *pdev)
 
 	version_reg = readl(fa->regs + FA_REG_VERSION);
 	dev_info(dev, "ccsds_frame_accel v%u.%u ready, irq %d, DMA %s\n",
-		 version_reg >> FA_VERSION_MAJOR_SHIFT, version_reg & FA_VERSION_MINOR_MASK,
+		 version_reg >> FA_VERSION_MAJOR_SHIFT, (u32)(version_reg & FA_VERSION_MINOR_MASK),
 		 fa->irq, (fa->dma_mm2s && fa->dma_s2mm) ? "attached" : "not yet attached");
 
 	return 0;

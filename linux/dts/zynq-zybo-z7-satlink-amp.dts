@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * SatLink-Z7 device tree without the PL nodes: the mainline Zybo Z7, the PS peripherals Linux
+ * owns and the AMP partitioning. Default of the Yocto build (SATLINK_PL_DT=0); runs with any
+ * bitstream, the modem firmware then uses its software loopback.
+ */
+#include "zynq-zybo-z7.dts"
+#include "zybo-z7-satlink-ps.dtsi"
+#include "zybo-z7-satlink-amp.dtsi"

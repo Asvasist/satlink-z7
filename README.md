@@ -33,7 +33,7 @@ Three processors on one chip, each with exclusive ownership of its own resources
 | Processor | Software | Role |
 |---|---|---|
 | Cortex-A9 Core 0 | Embedded Linux (Yocto, PREEMPT_RT) | Payload manager, kernel drivers, CCSDS/PUS telemetry & telecommand, SCPI server, networking |
-| Cortex-A9 Core 1 | FreeRTOS (AMP via OpenAMP/RPMsg) | Hard-real-time modem control, adaptive coding and modulation (ACM), frame timing |
+| Cortex-A9 Core 1 | FreeRTOS (AMP: own loader driver, shared-memory IPC) | Hard-real-time modem control, adaptive coding and modulation (ACM), frame timing |
 | MicroBlaze V (soft core, in the PL) | Bare-metal, own bootloader | Housekeeping: temperatures, voltages, watchdog, CAN bus |
 
 The programmable logic (PL) hosts a baseband modem (NCOs, RRC pulse-shaping filters, a channel
@@ -48,7 +48,7 @@ flowchart LR
     subgraph PS["Zynq PS"]
         L["Core 0: Linux<br/>drivers, payload manager,<br/>SCPI, CCSDS/PUS, TUN"]
         R["Core 1: FreeRTOS<br/>modem control, ACM"]
-        L <-- "RPMsg" --> R
+        L <-- "IPC rings" --> R
     end
     subgraph PL["Programmable logic"]
         M["Modem datapath<br/>NCO, RRC, channel emulator"]
@@ -77,7 +77,7 @@ as the link adapts.
 | RTOS design (FreeRTOS) | Modem control, ACM state machine, task timing on Core 1 — Stage 4 |
 | Embedded Linux (Yocto/PREEMPT_RT) | `yocto/meta-satlink` BSP layer, kernel config, image recipe — Stage 1 |
 | Linux kernel driver development | Platform drivers with device-tree bindings, char devices, IRQ + `dmaengine` DMA — Stage 2 |
-| AMP / heterogeneous multicore | OpenAMP + RPMsg between Linux (Core 0) and FreeRTOS (Core 1) — Stage 4 |
+| AMP / heterogeneous multicore | Linux driver that loads and supervises FreeRTOS on Core 1, lock-free shared-memory IPC, MMU-enforced isolation — Stage 4 |
 | Bus protocols: SPI, I2C, I2S, UART, CAN | MCP2515 CAN over SPI, SSM2603 codec over I2C, I2S audio, debug UART consoles — Stages 2–3 |
 | DMA and custom digital logic | AXI DMA to/from the modem, frame accelerator and FFT block; RTL in `hw/rtl` |
 | Bootloaders and boot images | FSBL, U-Boot, A/B image scheme with CRC/signature check and golden-image fallback — Stages 1 & 5 |
@@ -127,7 +127,7 @@ yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOO
 | 1 | Foundation and BSP: build system, CI, requirements, ICD, Yocto layer, boot | **in progress** |
 | 2 | Linux drivers, C++ HAL, diagnostics, board bring-up | **in progress** |
 | 3 | Housekeeping MCU, CAN bootloader, secure A/B boot | **software done**, hardware pending ([details](docs/stages/stage-3.md)) |
-| 4 | AMP and real-time modem (FreeRTOS, FEC, synchronization) | planned |
+| 4 | AMP and real-time modem (FreeRTOS, FEC, synchronization) | **software done**, boots in QEMU; board pending ([details](docs/stages/stage-4.md)) |
 | 5 | Adaptive link (ACM, LEO pass emulation) and on-board networking | planned |
 | 6 | SCPI server, Qt ground station, Rust CLI, HIL tests, performance report | planned |
 
