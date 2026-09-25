@@ -138,6 +138,11 @@ class SequenceCounter
         next_ = static_cast<std::uint16_t>((next_ + 1U) & 0x3FFFU);
         return value;
     }
+    /// The value Next() will return.
+    [[nodiscard]] std::uint16_t Peek() const
+    {
+        return next_;
+    }
 
   private:
     std::uint16_t next_ = 0;

@@ -27,9 +27,45 @@ static void log_msg(satlink_modem_app_t *app, uint8_t level, const char *text)
     (void)app->hw.send_msg(app->hw.ctx, (uint16_t)SATLINK_MSG_LOG, buf, (uint16_t)n);
 }
 
+static int8_t to_point(float v)
+{
+    const long x = lrintf(v * SATLINK_MSG_CONSTELLATION_SCALE);
+    if (x > 127L)
+    {
+        return 127;
+    }
+    if (x < -127L)
+    {
+        return -127;
+    }
+    return (int8_t)x;
+}
+
+/* Keeps SATLINK_MSG_CONSTELLATION_POINTS symbols of the frame just received, spread over its
+ * payload (the receiver has corrected gain and carrier phase: unit amplitude). */
+static void capture_constellation(satlink_modem_app_t *app, uint8_t modcod)
+{
+    const uint32_t len = app->rx.payload_len;
+    if (len < SATLINK_MSG_CONSTELLATION_POINTS)
+    {
+        return;
+    }
+    const uint32_t stride = len / SATLINK_MSG_CONSTELLATION_POINTS;
+    for (uint32_t k = 0U; k < SATLINK_MSG_CONSTELLATION_POINTS; ++k)
+    {
+        const satlink_cf_t s = app->rx.payload[(size_t)k * (size_t)stride];
+        app->constellation.i[k] = to_point(s.re);
+        app->constellation.q[k] = to_point(s.im);
+    }
+    app->constellation.modcod = modcod;
+    app->constellation.count = (uint8_t)SATLINK_MSG_CONSTELLATION_POINTS;
+    app->constellation_ready = true;
+}
+
 static void on_rx_frame(void *ctx, const satlink_rx_frame_t *frame)
 {
     satlink_modem_app_t *app = (satlink_modem_app_t *)ctx;
+    capture_constellation(app, frame->header.modcod);
     /* IDLE frames only feed the statistics; DATA frames go to Linux, good or bad (the payload
      * manager counts CRC failures per virtual channel). */
     if (frame->header.type != (uint8_t)SATLINK_FRAME_DATA)
@@ -147,6 +183,7 @@ satlink_status_t satlink_modem_app_init(satlink_modem_app_t *app, const satlink_
     app->tx_seq = 0U;
     app->tx_modcod = app->config.modcod;
     satlink_rx_init(&app->rx, &on_rx_frame, app);
+    app->constellation_ready = false;
     satlink_fir_init_rrc(&app->loop_tx_fir);
     satlink_fir_init_rrc(&app->loop_rx_fir);
     satlink_channel_init(&app->loop_channel, 0x5EED1234U);
@@ -426,4 +463,10 @@ void satlink_modem_app_tick(satlink_modem_app_t *app, uint32_t now_ms)
     uint8_t buf[SATLINK_MSG_MAX_BYTES];
     const size_t n = satlink_msg_encode_status(&status, buf, sizeof(buf));
     (void)app->hw.send_msg(app->hw.ctx, (uint16_t)SATLINK_MSG_STATUS, buf, (uint16_t)n);
+    if (app->constellation_ready)
+    {
+        const size_t c = satlink_msg_encode_constellation(&app->constellation, buf, sizeof(buf));
+        (void)app->hw.send_msg(app->hw.ctx, (uint16_t)SATLINK_MSG_CONSTELLATION, buf, (uint16_t)c);
+        app->constellation_ready = false;
+    }
 }

@@ -1,10 +1,11 @@
 SUMMARY = "SatLink-Z7 system services"
-DESCRIPTION = "A/B boot confirmation and update script, CAN bus bring-up, housekeeping controller firmware loader, payload manager and its IP endpoints."
+DESCRIPTION = "A/B boot confirmation and update script, CAN bus bring-up, housekeeping controller firmware loader, payload manager and its IP endpoints, system watchdog."
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 # @implements SRS-BOOT-002
 # @implements SRS-HKC-006
 # @implements SRS-PLM-003
+# @implements SRS-FDIR-001
 
 SRC_URI = " \
     file://fw_env.config \
@@ -14,6 +15,7 @@ SRC_URI = " \
     file://satlink-hkc-loader.service \
     file://satlink-payloadd.service \
     file://satlink-net-setup.sh \
+    file://satlink-watchdog.conf \
 "
 S = "${WORKDIR}"
 
@@ -28,6 +30,9 @@ SATLINK_HKC_IMAGE ?= ""
 
 do_install() {
     install -d ${D}${sysconfdir} ${D}${bindir} ${D}${systemd_system_unitdir}
+    install -d ${D}${sysconfdir}/systemd/system.conf.d
+    install -m 0644 ${S}/satlink-watchdog.conf \
+        ${D}${sysconfdir}/systemd/system.conf.d/10-satlink-watchdog.conf
     install -m 0644 ${S}/fw_env.config ${D}${sysconfdir}/fw_env.config
     install -m 0755 ${S}/satlink-update.sh ${D}${bindir}/satlink-update
     install -m 0755 ${S}/satlink-net-setup.sh ${D}${bindir}/satlink-net-setup

@@ -9,9 +9,12 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <poll.h>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "satlink/hal/can_bus.hpp"
@@ -99,6 +102,85 @@ class CanPlatformSource final : public PlatformSource
   private:
     std::unique_ptr<hal::CanBus> bus_;
     PlatformHk hk_;
+};
+
+/**
+ * @brief systemd service notifications (the sd_notify datagram protocol, without libsystemd).
+ *        Does nothing when the process was not started by systemd.
+ *
+ * @implements SRS-FDIR-002
+ */
+class SystemdNotifier
+{
+  public:
+    SystemdNotifier();
+    ~SystemdNotifier();
+    SystemdNotifier(const SystemdNotifier &) = delete;
+    SystemdNotifier &operator=(const SystemdNotifier &) = delete;
+    SystemdNotifier(SystemdNotifier &&) = delete;
+    SystemdNotifier &operator=(SystemdNotifier &&) = delete;
+
+    /// Sends "READY=1", "WATCHDOG=1", "STATUS=..." etc. Returns false if not under systemd.
+    bool Notify(std::string_view state);
+    /// WatchdogSec of the unit in ms (0: no watchdog). Ping at least twice per period.
+    [[nodiscard]] std::uint64_t WatchdogMs() const
+    {
+        return watchdog_ms_;
+    }
+
+  private:
+    int fd_ = -1;
+    std::string path_;
+    std::uint64_t watchdog_ms_ = 0;
+};
+
+/**
+ * @brief Line-oriented TCP server (SCPI raw socket, port 5025). Each received line is passed to
+ *        the handler; a non-empty answer is sent back with a newline. Several clients may be
+ *        connected; lines longer than kMaxLine are dropped.
+ */
+class TcpLineServer
+{
+  public:
+    using Handler = std::function<std::string(std::string_view)>;
+    static constexpr std::size_t kMaxClients = 8;
+    static constexpr std::size_t kMaxLine = 8192;
+
+    TcpLineServer(std::uint16_t port, Handler handler);
+    ~TcpLineServer();
+    TcpLineServer(const TcpLineServer &) = delete;
+    TcpLineServer &operator=(const TcpLineServer &) = delete;
+    TcpLineServer(TcpLineServer &&) = delete;
+    TcpLineServer &operator=(TcpLineServer &&) = delete;
+
+    /// Appends the listening socket and the clients to a poll set.
+    void AddPollFds(std::vector<pollfd> &fds) const;
+    /// Accepts, reads and answers whatever is ready; never blocks.
+    void Poll();
+
+    [[nodiscard]] std::size_t Clients() const
+    {
+        return clients_.size();
+    }
+    /// The bound port (useful with port 0).
+    [[nodiscard]] std::uint16_t Port() const
+    {
+        return port_;
+    }
+
+  private:
+    struct Client
+    {
+        int fd;
+        std::string in;
+        bool overflow = false;
+    };
+    bool Serve(Client &c);
+
+    int fd_ = -1;
+    std::uint16_t port_ = 0;
+    Handler handler_;
+    std::vector<Client> clients_;
 };
 
 } // namespace satlink::payload

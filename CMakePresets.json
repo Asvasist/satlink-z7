@@ -38,6 +38,16 @@
       }
     },
     {
+      "name": "host-release",
+      "displayName": "Host: optimised tools, simulator and performance sweep (no tests)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SATLINK_TARGET": "host",
+        "SATLINK_BUILD_TESTS": "OFF"
+      }
+    },
+    {
       "name": "linux-arm",
       "displayName": "Core 0: Linux user space (arm-linux-gnueabihf)",
       "inherits": "base",
@@ -64,6 +74,7 @@
     { "name": "host-coverage", "configurePreset": "host-coverage" },
     { "name": "host-asan", "configurePreset": "host-asan" },
     { "name": "host-tidy", "configurePreset": "host-tidy" },
+    { "name": "host-release", "configurePreset": "host-release" },
     { "name": "linux-arm", "configurePreset": "linux-arm" },
     { "name": "rtos-a9", "configurePreset": "rtos-a9" },
     { "name": "hkc-riscv", "configurePreset": "hkc-riscv" }

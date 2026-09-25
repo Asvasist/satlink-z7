@@ -41,13 +41,14 @@ SRS-PLM-001..003.
 
 [REQUIREMENT]
 UID: SRS-SYS-004
-STATUS: Draft
+STATUS: Accepted
 TITLE: Instrument control interface
 STATEMENT: >>>
 The payload shall provide a SCPI command interface on TCP port 5025.
 <<<
 RATIONALE: >>>
-Allows scripted control with pyVISA like a laboratory instrument. Detailed in Stage 6.
+Allows scripted control with pyVISA like a laboratory instrument. Detailed in SRS-SCPI-001 and
+SRS-SCPI-002.
 <<<
 
 [REQUIREMENT]
@@ -840,4 +841,135 @@ Space Packets on their own virtual channel through the modem link in both direct
 <<<
 RATIONALE: >>>
 Standard tools (ping, iperf3, ssh) run across the emulated space link.
+<<<
+
+[REQUIREMENT]
+UID: SRS-SCPI-001
+STATUS: Accepted
+TITLE: SCPI parser
+STATEMENT: >>>
+The SCPI parser shall accept SCPI-1999 program messages with short and long header forms,
+optional nodes, compound commands with the current-path rule, numeric parameters with MINimum,
+MAXimum, DEFault and units, and shall report errors through a 16-entry error queue and the IEEE
+488.2 status registers (``*CLS``, ``*ESE``, ``*ESR?``, ``*OPC``, ``*OPC?``, ``*SRE``,
+``*STB?``, ``*WAI``, ``SYSTem:ERRor?``).
+<<<
+RATIONALE: >>>
+Standard behaviour lets instrument tools (pyVISA, LabVIEW) drive the payload without special
+cases.
+<<<
+
+[REQUIREMENT]
+UID: SRS-SCPI-002
+STATUS: Accepted
+TITLE: Payload SCPI command set
+STATEMENT: >>>
+The SCPI interface shall provide ``*IDN?``, ``*RST`` and ``*TST?``, control of the MODCOD, ACM, loopback,
+channel emulator and pass emulation, restart of the modem firmware, and measurements of Es/N0,
+lock, MODCOD, bit and frame error rate over a resettable window, latency, processor load and
+link counters.
+<<<
+RATIONALE: >>>
+Everything a link test needs is scriptable from the bench.
+<<<
+
+[REQUIREMENT]
+UID: SRS-GS-001
+STATUS: Accepted
+TITLE: Ground station
+STATEMENT: >>>
+A ground station application for Windows and Linux shall send every mission telecommand, track
+their verification, and display the housekeeping, the event log and live plots of Es/N0, MODCOD,
+bit error rate and pass elevation.
+<<<
+RATIONALE: >>>
+Operates the payload the way a mission control system would.
+<<<
+
+[REQUIREMENT]
+UID: SRS-GS-002
+STATUS: Accepted
+TITLE: Headless ground station
+STATEMENT: >>>
+The ground station shall be able to connect, start a pass and save a screenshot without a
+display, for documentation and continuous integration.
+<<<
+RATIONALE: >>>
+Its build and its protocol handling are checked without a desktop.
+<<<
+
+[REQUIREMENT]
+UID: SRS-GS-003
+STATUS: Accepted
+TITLE: Command-line client
+STATEMENT: >>>
+A command-line client without third-party dependencies shall send the mission telecommands,
+wait for their verification with an exit status for scripts, and print housekeeping and all
+telemetry.
+<<<
+RATIONALE: >>>
+Scripting and operations from a terminal, on any machine with the toolchain.
+<<<
+
+[REQUIREMENT]
+UID: SRS-GS-004
+STATUS: Accepted
+TITLE: Python client library
+STATEMENT: >>>
+A Python library shall encode telecommands, decode all payload reports and drive the SCPI
+interface through pyVISA or a plain socket.
+<<<
+RATIONALE: >>>
+Test automation and analysis in Python.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HIL-001
+STATUS: Accepted
+TITLE: Hardware-in-the-loop tests
+STATEMENT: >>>
+An automated test suite shall verify the payload end to end over its external interfaces (PUS
+over UDP, SCPI over TCP) and run unchanged against the board or against the daemon in
+simulation mode.
+<<<
+RATIONALE: >>>
+The same acceptance tests run in continuous integration and on the bench.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PERF-001
+STATUS: Accepted
+TITLE: Link performance characterisation
+STATEMENT: >>>
+The frame and bit error rates of every MODCOD shall be measured against Es/N0 through the
+complete physical layer with carrier and timing offsets, and each ACM switching threshold shall
+be at or above the Es/N0 at which that MODCOD reaches a frame error rate of 1 %.
+<<<
+RATIONALE: >>>
+ACM must never select a MODCOD the link cannot carry; thresholds come from measurements.
+<<<
+
+[REQUIREMENT]
+UID: SRS-FDIR-001
+STATUS: Accepted
+TITLE: System watchdog
+STATEMENT: >>>
+The system watchdog of the Zynq shall reset the SoC when Linux stops feeding it for 30 s; the
+boot counter shall then lead to a rollback of an unconfirmed boot slot.
+<<<
+RATIONALE: >>>
+A hung kernel or init must not leave the payload unrecoverable.
+<<<
+
+[REQUIREMENT]
+UID: SRS-FDIR-002
+STATUS: Accepted
+TITLE: Service supervision
+STATEMENT: >>>
+The payload manager shall signal readiness and feed a service watchdog from its main loop; a
+crashed or hung payload manager shall be restarted, and a crash loop shall stop the service so
+that an unconfirmed boot slot is not confirmed.
+<<<
+RATIONALE: >>>
+Application faults are handled at the lowest level that can recover them.
 <<<

@@ -20,7 +20,9 @@
  * Telemetry reaches the ground only through the modem link. While the receiver has no lock
  * (LOS, deep fade) the packets are stored in the virtual channel queues and downlinked when the
  * link is back (store and forward); frames lost to errors while locked stay lost, as on a real
- * downlink. Telecommands arrive
+ * downlink. After a commanded change of the link the downlink pauses until the modem has
+ * reported on the new link, so the command's own reports are not sent into it blind.
+ * Telecommands arrive
  * over Ethernet: the board emulates the downlink only. `tm_direct` sends a copy of all TM
  * straight to the ground as well (for debugging without a link).
  *
@@ -100,9 +102,30 @@ class PayloadManager
     /// Handle everything that is ready; never blocks.
     void Step();
 
-    /// Starts a pass (also available as ST[8] kStartPass).
+    // ---- control (shared by the ST[08] functions and the SCPI server) ----
+    /// Each returns 0, or a negative errno from the modem port.
+    int SetModcod(std::uint8_t modcod); ///< fixed MODCOD, ACM off
+    int SetAcm(const satlink_msg_acm_config_t &config);
+    int SetChannel(std::uint16_t noise_level, std::uint16_t gain_q15); ///< stops a pass
+    /// Channel emulator set for @p esn0_db with the configured noise scale.
+    int SetEsN0(double esn0_db);
+    int SetLoopback(std::uint8_t mode);
+    int RestartModem();
     void StartPass(const PassConfig &config, double time_scale);
     void StopPass();
+
+    [[nodiscard]] const PayloadConfig &Config() const
+    {
+        return config_;
+    }
+    [[nodiscard]] const satlink_msg_channel_t &Channel() const
+    {
+        return channel_;
+    }
+    [[nodiscard]] const std::optional<satlink_msg_acm_config_t> &AcmConfig() const
+    {
+        return acm_config_;
+    }
 
     [[nodiscard]] const PayloadStats &Stats() const
     {
@@ -139,6 +162,7 @@ class PayloadManager
     void UpdatePass(std::uint64_t now);
     void UpdateHousekeeping(std::uint64_t now);
     void FeedModem(std::uint64_t now);
+    void HoldDownlink();
     void ReadTunnels();
 
     PayloadConfig config_;
@@ -156,14 +180,18 @@ class PayloadManager
     pus::SequenceCounter ip_up_seq_;
     std::uint16_t message_counter_ = 0;
 
-    std::array<bool, 4> hk_enabled_{false, true, true, true};
-    std::array<std::uint32_t, 4> hk_period_ms_{};
-    std::array<std::uint64_t, 4> hk_next_ms_{};
+    // Index = structure ID. The constellation (SID 4) costs about 1 kbit/s: off until asked for.
+    std::array<bool, kHkStructures + 1U> hk_enabled_{false, true, true, true, false};
+    std::array<std::uint32_t, kHkStructures + 1U> hk_period_ms_{};
+    std::array<std::uint64_t, kHkStructures + 1U> hk_next_ms_{};
 
     PassState pass_;
     std::unique_ptr<LeoPass> leo_;
     std::uint64_t pass_last_update_ms_ = 0;
 
+    satlink_msg_channel_t channel_{0, 0x7FFF};
+    std::optional<satlink_msg_acm_config_t> acm_config_;
+    std::uint64_t downlink_hold_until_ms_ = 0;
     double queue_estimate_ = 0.0;
     std::uint64_t last_feed_ms_ = 0;
     bool was_locked_ = false;

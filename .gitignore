@@ -6,7 +6,11 @@
 *.gcno
 compile_commands.json
 
+# Rust
+/host/cli/target/
+
 # Python
+*.egg-info/
 __pycache__/
 *.pyc
 .venv/

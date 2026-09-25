@@ -5,13 +5,14 @@
  * | ID | Modulation | Code rate | Info bits / symbol | Es/N0 threshold (dB) |
  * |----|------------|-----------|--------------------|----------------------|
  * | 0  | BPSK       | 1/2       | 0.50               | 2.0                  |
- * | 1  | QPSK       | 1/2       | 1.00               | 5.0                  |
- * | 2  | QPSK       | 3/4       | 1.50               | 8.0                  |
- * | 3  | 8PSK       | 2/3       | 2.00               | 11.5                 |
- * | 4  | 8PSK       | 5/6       | 2.50               | 15.0                 |
+ * | 1  | QPSK       | 1/2       | 1.00               | 4.5                  |
+ * | 2  | QPSK       | 3/4       | 1.50               | 7.0                  |
+ * | 3  | 8PSK       | 2/3       | 2.00               | 10.0                 |
+ * | 4  | 8PSK       | 5/6       | 2.50               | 12.5                 |
  *
  * Thresholds are the Es/N0 at which the frame error rate of a 128-byte frame falls below 1 %
- * in the AWGN simulation (tests/perf), rounded up; the ACM controller adds its own margin.
+ * in the link simulation (tools/perf, with carrier and timing offsets), plus at least 0.4 dB,
+ * rounded to 0.5 dB (docs/performance); the ACM controller adds its own margin.
  *
  * @implements SRS-MDM-002
  */

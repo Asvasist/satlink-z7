@@ -282,6 +282,46 @@ satlink_status_t satlink_msg_decode_log(const uint8_t *in, size_t len, satlink_m
     return SATLINK_OK;
 }
 
+size_t satlink_msg_encode_constellation(const satlink_msg_constellation_t *m, uint8_t *out,
+                                        size_t cap)
+{
+    if ((m == NULL) || (out == NULL) || (m->count > SATLINK_MSG_CONSTELLATION_POINTS) ||
+        (cap < (2U + (2U * (size_t)m->count))))
+    {
+        return 0U;
+    }
+    out[0] = m->modcod;
+    out[1] = m->count;
+    for (size_t k = 0U; k < m->count; ++k)
+    {
+        out[2U + (2U * k)] = (uint8_t)m->i[k];
+        out[3U + (2U * k)] = (uint8_t)m->q[k];
+    }
+    return 2U + (2U * (size_t)m->count);
+}
+
+satlink_status_t satlink_msg_decode_constellation(const uint8_t *in, size_t len,
+                                                  satlink_msg_constellation_t *m)
+{
+    if ((in == NULL) || (m == NULL))
+    {
+        return SATLINK_ERR_NULL;
+    }
+    if ((len < 2U) || (in[1] > SATLINK_MSG_CONSTELLATION_POINTS) ||
+        (len != (2U + (2U * (size_t)in[1]))))
+    {
+        return SATLINK_ERR_RANGE;
+    }
+    m->modcod = in[0];
+    m->count = in[1];
+    for (size_t k = 0U; k < m->count; ++k)
+    {
+        m->i[k] = (int8_t)in[2U + (2U * k)];
+        m->q[k] = (int8_t)in[3U + (2U * k)];
+    }
+    return SATLINK_OK;
+}
+
 const char *satlink_msg_name(uint16_t type)
 {
     switch (type)
@@ -306,6 +346,8 @@ const char *satlink_msg_name(uint16_t type)
         return "STATUS";
     case SATLINK_MSG_LOG:
         return "LOG";
+    case SATLINK_MSG_CONSTELLATION:
+        return "CONSTELLATION";
     default:
         return "?";
     }

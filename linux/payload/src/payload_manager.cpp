@@ -7,6 +7,7 @@
 #include "satlink/payload/payload_manager.hpp"
 
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
 
 #include "satlink/modem/frame.h"
@@ -102,6 +103,11 @@ std::int16_t ToCenti(double v)
 
 constexpr std::uint64_t kPassUpdateMs = 250;
 constexpr double kPassTailS = 10.0; ///< keep emulating a little after LOS
+/// After a change of the link (channel, MODCOD, loopback) the downlink waits this long: two
+/// STATUS periods, so the lock state it goes by describes the new link. Without the wait the
+/// telemetry of the command itself (its ST[01] reports) would go out at the old MODCOD into the
+/// new channel and be lost.
+constexpr std::uint64_t kLinkSettleMs = 2000;
 
 } // namespace
 
@@ -123,7 +129,9 @@ void PayloadManager::Start()
 {
     client_.SetTime(clock_.UnixMs());
     client_.Configure({true, true, config_.initial_modcod, config_.loopback});
-    client_.SetAcm({config_.acm, 0, SATLINK_MODCOD_COUNT - 1, 100, 100});
+    acm_config_ = satlink_msg_acm_config_t{config_.acm, 0, SATLINK_MODCOD_COUNT - 1, 100, 100};
+    client_.SetAcm(*acm_config_);
+    client_.SetChannel(channel_.noise_level, channel_.gain_q15);
     const std::uint64_t now = clock_.NowMs();
     for (auto &next : hk_next_ms_)
     {
@@ -234,7 +242,7 @@ bool PayloadManager::Execute(const pus::Telecommand &tc, FailureCode &failure)
         std::vector<std::uint8_t> sids(n);
         for (auto &sid : sids)
         {
-            if (!r.U8(sid) || sid < 1 || sid > 3)
+            if (!r.U8(sid) || sid < 1 || sid > kHkStructures)
             {
                 return false;
             }
@@ -260,8 +268,8 @@ bool PayloadManager::Execute(const pus::Telecommand &tc, FailureCode &failure)
     {
         std::uint8_t sid = 0;
         std::uint32_t period = 0;
-        if (!r.U8(sid) || !r.U32(period) || !r.AtEnd() || sid < 1 || sid > 3 || period < 100 ||
-            period > 60000)
+        if (!r.U8(sid) || !r.U32(period) || !r.AtEnd() || sid < 1 || sid > kHkStructures ||
+            period < 100 || period > 60000)
         {
             return false;
         }
@@ -291,13 +299,7 @@ bool PayloadManager::ExecuteFunction(std::span<const std::uint8_t> data, Failure
         {
             return false;
         }
-        config_.acm = false;
-        config_.initial_modcod = modcod;
-        rc = client_.SetAcm({false, 0, SATLINK_MODCOD_COUNT - 1, 100, 100});
-        if (rc == 0)
-        {
-            rc = client_.Configure({true, true, modcod, config_.loopback});
-        }
+        rc = SetModcod(modcod);
         break;
     }
     case Function::kSetAcm:
@@ -312,8 +314,7 @@ bool PayloadManager::ExecuteFunction(std::span<const std::uint8_t> data, Failure
         {
             return false;
         }
-        config_.acm = enable != 0;
-        rc = client_.SetAcm({enable != 0, lo, hi, margin, hyst});
+        rc = SetAcm({enable != 0, lo, hi, margin, hyst});
         break;
     }
     case Function::kSetChannel:
@@ -324,8 +325,7 @@ bool PayloadManager::ExecuteFunction(std::span<const std::uint8_t> data, Failure
         {
             return false;
         }
-        StopPass();
-        rc = client_.SetChannel(noise, gain);
+        rc = SetChannel(noise, gain);
         break;
     }
     case Function::kStartPass:
@@ -358,8 +358,7 @@ bool PayloadManager::ExecuteFunction(std::span<const std::uint8_t> data, Failure
         {
             return false;
         }
-        config_.loopback = mode;
-        rc = client_.Configure({true, true, config_.initial_modcod, mode});
+        rc = SetLoopback(mode);
         break;
     }
     case Function::kRestartModem:
@@ -367,17 +366,7 @@ bool PayloadManager::ExecuteFunction(std::span<const std::uint8_t> data, Failure
         {
             return false;
         }
-        if (!config_.restart_modem)
-        {
-            failure = FailureCode::kModemError;
-            return false;
-        }
-        rc = config_.restart_modem();
-        if (rc == 0)
-        {
-            EmitEvent(Event::kModemRestarted, 2);
-            Start(); // the new firmware instance needs its configuration again
-        }
+        rc = RestartModem();
         break;
     default:
         failure = FailureCode::kUnknownFunction;
@@ -389,6 +378,84 @@ bool PayloadManager::ExecuteFunction(std::span<const std::uint8_t> data, Failure
         return false;
     }
     return true;
+}
+
+// ---- control ----
+
+int PayloadManager::SetModcod(std::uint8_t modcod)
+{
+    if (modcod >= SATLINK_MODCOD_COUNT)
+    {
+        return -EINVAL;
+    }
+    HoldDownlink();
+    config_.acm = false;
+    config_.initial_modcod = modcod;
+    satlink_msg_acm_config_t acm = acm_config_.value_or(
+        satlink_msg_acm_config_t{false, 0, SATLINK_MODCOD_COUNT - 1, 100, 100});
+    acm.enabled = false;
+    int rc = SetAcm(acm);
+    if (rc == 0)
+    {
+        rc = client_.Configure({true, true, modcod, config_.loopback});
+    }
+    return rc;
+}
+
+int PayloadManager::SetAcm(const satlink_msg_acm_config_t &config)
+{
+    if (config.min_modcod > config.max_modcod || config.max_modcod >= SATLINK_MODCOD_COUNT)
+    {
+        return -EINVAL;
+    }
+    config_.acm = config.enabled;
+    acm_config_ = config;
+    return client_.SetAcm(config);
+}
+
+int PayloadManager::SetChannel(std::uint16_t noise_level, std::uint16_t gain_q15)
+{
+    HoldDownlink();
+    StopPass();
+    channel_ = {noise_level, gain_q15};
+    return client_.SetChannel(noise_level, gain_q15);
+}
+
+int PayloadManager::SetEsN0(double esn0_db)
+{
+    const ChannelSetting ch = ChannelFor(esn0_db, true, config_.noise_scale);
+    return SetChannel(ch.noise_level, ch.gain_q15);
+}
+
+int PayloadManager::SetLoopback(std::uint8_t mode)
+{
+    if (mode > SATLINK_LOOP_SOFTWARE)
+    {
+        return -EINVAL;
+    }
+    HoldDownlink();
+    config_.loopback = mode;
+    return client_.Configure({true, true, config_.initial_modcod, mode});
+}
+
+int PayloadManager::RestartModem()
+{
+    if (!config_.restart_modem)
+    {
+        return -ENOTSUP;
+    }
+    const int rc = config_.restart_modem();
+    if (rc == 0)
+    {
+        EmitEvent(Event::kModemRestarted, 2);
+        Start(); // the new firmware instance needs its configuration again
+    }
+    return rc;
+}
+
+void PayloadManager::HoldDownlink()
+{
+    downlink_hold_until_ms_ = clock_.NowMs() + kLinkSettleMs;
 }
 
 // ---- telemetry ----
@@ -461,13 +528,25 @@ std::vector<std::uint8_t> PayloadManager::HousekeepingData(HkStructure sid)
         w.U8(p.rtos_state).U32(p.rtos_restarts);
         break;
     }
+    case HkStructure::kConstellation:
+    {
+        // MODCOD, count, then (I, Q) pairs in 1/64 of the unit symbol amplitude.
+        const satlink_msg_constellation_t c =
+            client_.LastConstellation().value_or(satlink_msg_constellation_t{});
+        w.U8(c.modcod).U8(c.count);
+        for (std::size_t k = 0; k < c.count; ++k)
+        {
+            w.U8(static_cast<std::uint8_t>(c.i[k])).U8(static_cast<std::uint8_t>(c.q[k]));
+        }
+        break;
+    }
     }
     return w.Take();
 }
 
 void PayloadManager::UpdateHousekeeping(std::uint64_t now)
 {
-    for (std::uint8_t sid = 1; sid <= 3; ++sid)
+    for (std::uint8_t sid = 1; sid <= kHkStructures; ++sid)
     {
         if (!hk_enabled_[sid] || now < hk_next_ms_[sid])
         {
@@ -583,7 +662,8 @@ void PayloadManager::FeedModem(std::uint64_t now)
     // The pass schedule is known on board as well: below the horizon there is no contact even
     // before the (once per second) lock status notices.
     const auto status = client_.LastStatus();
-    if (!status || status->locked == 0 || (pass_.active && !pass_.visible))
+    if (!status || status->locked == 0 || (pass_.active && !pass_.visible) ||
+        now < downlink_hold_until_ms_)
     {
         last_feed_ms_ = now;
         return;
@@ -627,7 +707,8 @@ void PayloadManager::StopPass()
     if (pass_.active)
     {
         pass_.active = false;
-        client_.SetChannel(0, 0x7FFF);
+        HoldDownlink();
+        client_.SetChannel(channel_.noise_level, channel_.gain_q15);
     }
 }
 

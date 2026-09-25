@@ -218,3 +218,113 @@ jobs:
         with:
           name: srs
           path: build/srs*
+
+  ground-station:
+    name: ground station (Qt 6, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build qt6-base-dev qt6-charts-dev
+      - name: Install Qt (Windows)
+        if: runner.os == 'Windows'
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.7.*"
+          modules: qtcharts
+      - name: Build
+        shell: bash
+        run: |
+          extra=""
+          if [ "$RUNNER_OS" = "Linux" ]; then extra="-G Ninja -DSATLINK_GS_WERROR=ON"; fi
+          cmake -S host/gs -B build/gs -DCMAKE_BUILD_TYPE=Release $extra
+          cmake --build build/gs --config Release
+      # @verifies SRS-GS-002
+      - name: Headless run against the simulated payload (screenshot)
+        if: runner.os == 'Linux'
+        run: |
+          cmake --preset host-release && cmake --build --preset host-release --target satlink-payloadd
+          build/host-release/linux/payload/satlink-payloadd --sim --scpi-port 0 &
+          QT_QPA_PLATFORM=offscreen build/gs/satlink-gs --pass --screenshot gs.png --after 30
+          kill %1
+          test -s gs.png
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: ground-station-screenshot
+          path: gs.png
+
+  rust-cli:
+    name: Rust CLI (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    defaults:
+      run:
+        working-directory: host/cli
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup component add rustfmt clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo build --release
+
+  hil-sim:
+    name: HIL tests against the simulated payload (pytest + pyVISA)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build
+          python -m pip install -r host/hil/requirements.txt
+      - name: Build the payload daemon
+        run: cmake --preset host-release && cmake --build --preset host-release --target satlink-payloadd
+      - name: Python client tests
+        run: python -m pytest host/python/tests -q
+      - name: HIL suite (--target sim)
+        run: >
+          python -m pytest host/hil --target sim
+          --payloadd build/host-release/linux/payload/satlink-payloadd
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: hil-payloadd-log
+          path: build/hil-payloadd.log
+
+  performance:
+    name: link performance sweep
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build
+          python -m pip install matplotlib
+      - run: cmake --preset host-release && cmake --build --preset host-release --target satlink-modem-perf
+      - name: Sweep (500 frames per point)
+        run: build/host-release/tools/perf/satlink-modem-perf --frames 500 > modem_perf.csv
+      # @verifies SRS-PERF-001
+      - name: Every ACM threshold is at or above the measured 1 % FER point
+        run: python tools/perf/plot_perf.py modem_perf.csv --out performance --check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: performance-report
+          path: |
+            modem_perf.csv
+            performance/
+

@@ -121,9 +121,38 @@ TEST(MsgTest, LogTruncatesAndTerminates)
     EXPECT_EQ(SATLINK_ERR_RANGE, satlink_msg_decode_log(buf, 0, &out));
 }
 
+TEST(MsgTest, Constellation)
+{
+    satlink_msg_constellation_t c{};
+    c.modcod = 3;
+    c.count = SATLINK_MSG_CONSTELLATION_POINTS;
+    for (std::uint8_t k = 0; k < c.count; ++k)
+    {
+        c.i[k] = static_cast<std::int8_t>(k - 32);
+        c.q[k] = static_cast<std::int8_t>(-k);
+    }
+    std::uint8_t buf[SATLINK_MSG_MAX_BYTES];
+    const auto n = satlink_msg_encode_constellation(&c, buf, sizeof(buf));
+    ASSERT_EQ(2U + (2U * SATLINK_MSG_CONSTELLATION_POINTS), n);
+    satlink_msg_constellation_t out{};
+    ASSERT_EQ(SATLINK_OK, satlink_msg_decode_constellation(buf, n, &out));
+    EXPECT_EQ(3, out.modcod);
+    EXPECT_EQ(-32, out.i[0]);
+    EXPECT_EQ(-63, out.q[63]);
+    EXPECT_EQ(SATLINK_ERR_RANGE, satlink_msg_decode_constellation(buf, n - 1, &out));
+    EXPECT_EQ(SATLINK_ERR_RANGE, satlink_msg_decode_constellation(buf, 1, &out));
+    EXPECT_EQ(SATLINK_ERR_NULL, satlink_msg_decode_constellation(nullptr, n, &out));
+    EXPECT_EQ(0U, satlink_msg_encode_constellation(&c, buf, 10));
+    c.count = SATLINK_MSG_CONSTELLATION_POINTS + 1;
+    EXPECT_EQ(0U, satlink_msg_encode_constellation(&c, buf, sizeof(buf)));
+    buf[1] = 65;
+    EXPECT_EQ(SATLINK_ERR_RANGE, satlink_msg_decode_constellation(buf, 132, &out));
+}
+
 TEST(MsgTest, Names)
 {
     EXPECT_STREQ("RX_FRAME", satlink_msg_name(SATLINK_MSG_RX_FRAME));
+    EXPECT_STREQ("CONSTELLATION", satlink_msg_name(SATLINK_MSG_CONSTELLATION));
     EXPECT_STREQ("?", satlink_msg_name(0x7777));
 }
 

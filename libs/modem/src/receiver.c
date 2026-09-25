@@ -13,14 +13,17 @@
 #include "satlink/modem/prbs.h"
 #include "satlink/modem/rrc.h"
 
+/* PLL_KP / PLL_KI: carrier loop gains per symbol (loop bandwidth about 0.5 % of the symbol
+ * rate, damping 0.7). The detector is decision-directed, so its self-noise at low Es/N0 sets the
+ * bandwidth: 0.08 / 0.002 cost 2 dB on QPSK 1/2 and 8PSK 2/3 (docs/performance). */
 #define TWO_PI_F        (6.28318531F)
 #define PI_F            (3.14159265F)
 #define HALF_STEP       ((float)SATLINK_MODEM_SPS / 2.0F)
 #define AGC_RATE        (0.002F)
 #define TIMING_KP       (0.02F)
 #define TIMING_KI       (0.0001F)
-#define PLL_KP          (0.08F)
-#define PLL_KI          (0.002F)
+#define PLL_KP          (0.02F)
+#define PLL_KI          (0.0002F)
 #define SYNC_THRESHOLD  (0.35F)
 #define ESN0_SMOOTHING  (0.2F)
 #define CODED_INFO_BITS ((size_t)(SATLINK_FRAME_INFO_BYTES + 2U) * 8U)

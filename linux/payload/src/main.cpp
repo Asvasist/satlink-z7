@@ -13,9 +13,16 @@
  *     --loopback MODE       software | digital | analog (default software)
  *     --modcod N            initial MODCOD (default 1)
  *     --no-acm              fixed MODCOD
+ *     --scpi-port N         SCPI instrument port (TCP, default 5025; 0 = off)
+ *     --serial S            serial number reported by *IDN? (default 0)
  *     --verbose             print a status line every 5 s
  *
+ * Under systemd (Type=notify) the daemon reports READY=1 once configured and pings the service
+ * watchdog from its main loop: a hung loop gets the service restarted.
+ *
  * @implements SRS-PLM-003
+ * @implements SRS-SCPI-002
+ * @implements SRS-FDIR-002
  */
 #include <csignal>
 #include <cstdio>
@@ -29,9 +36,11 @@
 #include <vector>
 
 #include "satlink/amp_client/simulated_core1.hpp"
+#include "satlink/common/version.h"
 #include "satlink/hal/socket_can_bus.hpp"
 #include "satlink/payload/payload_manager.hpp"
 #include "satlink/payload/posix_io.hpp"
+#include "satlink/payload/scpi_instrument.hpp"
 
 #if defined(SATLINK_HAVE_AMP_DEVICE)
 #include "satlink/amp_client/amp_device.hpp"
@@ -59,6 +68,8 @@ struct Options
     std::uint8_t loopback = 2;
     std::uint8_t modcod = 1;
     bool acm = true;
+    std::uint16_t scpi_port = 5025;
+    std::string serial = "0";
     bool verbose = false;
 };
 
@@ -106,6 +117,10 @@ Options Parse(int argc, char **argv)
             o.modcod = static_cast<std::uint8_t>(std::stoul(value()));
         else if (a == "--no-acm")
             o.acm = false;
+        else if (a == "--scpi-port")
+            o.scpi_port = static_cast<std::uint16_t>(std::stoul(value()));
+        else if (a == "--serial")
+            o.serial = value();
         else if (a == "--verbose")
             o.verbose = true;
         else
@@ -195,29 +210,50 @@ int Run(const Options &o)
     payload::PayloadManager manager(cfg, *port, ground, clock, sat_tun.get(), gnd_tun.get(),
                                     &platform);
     manager.Start();
-    (void)std::fprintf(stderr, "satlink-payloadd: %s, TC on UDP %u, TM to %s:%u%s\n",
+
+    payload::ScpiInstrument instrument(
+        manager, o.serial, std::string(SATLINK_VERSION_STRING "-") + SATLINK_GIT_REVISION);
+    std::unique_ptr<payload::TcpLineServer> scpi;
+    if (o.scpi_port != 0)
+    {
+        scpi = std::make_unique<payload::TcpLineServer>(
+            o.scpi_port, [&instrument](std::string_view line) { return instrument.Execute(line); });
+    }
+    (void)std::fprintf(stderr, "satlink-payloadd: %s, TC on UDP %u, TM to %s:%u%s, SCPI %s\n",
                        o.sim ? "simulated modem" : o.amp.c_str(), o.tc_port,
                        o.gs_host.empty() ? "(last TC sender)" : o.gs_host.c_str(), o.gs_port,
-                       o.tun ? ", IP on satlink-sat / satlink-gnd" : "");
+                       o.tun ? ", IP on satlink-sat / satlink-gnd" : "",
+                       scpi ? std::to_string(scpi->Port()).c_str() : "off");
 
-    std::vector<pollfd> fds;
-    fds.push_back({ground.Fd(), POLLIN, 0});
+    payload::SystemdNotifier systemd;
+    (void)systemd.Notify("READY=1\nSTATUS=running");
+    const std::uint64_t watchdog_ms = systemd.WatchdogMs() / 2U;
+
+    std::vector<pollfd> base;
+    base.push_back({ground.Fd(), POLLIN, 0});
 #if defined(SATLINK_HAVE_AMP_DEVICE)
     if (device)
     {
-        fds.push_back({device->Fd(), POLLIN, 0});
+        base.push_back({device->Fd(), POLLIN, 0});
     }
 #endif
     if (sat_tun)
     {
-        fds.push_back({sat_tun->Fd(), POLLIN, 0});
-        fds.push_back({gnd_tun->Fd(), POLLIN, 0});
+        base.push_back({sat_tun->Fd(), POLLIN, 0});
+        base.push_back({gnd_tun->Fd(), POLLIN, 0});
     }
 
     std::uint64_t last = clock.NowMs();
     std::uint64_t last_report = last;
+    std::uint64_t last_watchdog = 0;
+    std::vector<pollfd> fds;
     while (g_stop == 0)
     {
+        fds = base;
+        if (scpi)
+        {
+            scpi->AddPollFds(fds);
+        }
         (void)::poll(fds.data(), fds.size(), 10);
         const std::uint64_t now = clock.NowMs();
         if (sim)
@@ -231,6 +267,15 @@ int Run(const Options &o)
             can->Poll();
         }
         manager.Step();
+        if (scpi)
+        {
+            scpi->Poll();
+        }
+        if (watchdog_ms != 0 && now - last_watchdog >= watchdog_ms)
+        {
+            last_watchdog = now;
+            (void)systemd.Notify("WATCHDOG=1");
+        }
         if (o.verbose && now - last_report >= 5000)
         {
             last_report = now;
@@ -245,6 +290,7 @@ int Run(const Options &o)
                 manager.Pass().active ? "on" : "off", manager.Pass().sample.elevation_deg);
         }
     }
+    (void)systemd.Notify("STOPPING=1");
     (void)std::fprintf(stderr, "satlink-payloadd: stopped\n");
     return 0;
 }

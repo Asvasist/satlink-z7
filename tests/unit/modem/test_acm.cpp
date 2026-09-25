@@ -51,12 +51,14 @@ class AcmTest : public ::testing::Test
 
 TEST_F(AcmTest, TargetFollowsThresholdsPlusMargin)
 {
-    // Thresholds 2, 5, 8, 11.5, 15 dB; margin 1 dB.
+    // Thresholds 2, 4.5, 7, 10, 12.5 dB; margin 1 dB.
     EXPECT_EQ(0, satlink_acm_target(&acm_, -5.0F));
-    EXPECT_EQ(0, satlink_acm_target(&acm_, 5.9F));
-    EXPECT_EQ(1, satlink_acm_target(&acm_, 6.0F));
-    EXPECT_EQ(2, satlink_acm_target(&acm_, 9.0F));
-    EXPECT_EQ(3, satlink_acm_target(&acm_, 12.5F));
+    EXPECT_EQ(0, satlink_acm_target(&acm_, 5.4F));
+    EXPECT_EQ(1, satlink_acm_target(&acm_, 5.5F));
+    EXPECT_EQ(2, satlink_acm_target(&acm_, 8.0F));
+    EXPECT_EQ(3, satlink_acm_target(&acm_, 11.0F));
+    EXPECT_EQ(3, satlink_acm_target(&acm_, 13.4F));
+    EXPECT_EQ(4, satlink_acm_target(&acm_, 13.5F));
     EXPECT_EQ(4, satlink_acm_target(&acm_, 30.0F));
 }
 
@@ -74,9 +76,9 @@ TEST_F(AcmTest, StepsUpOneAtATimeAfterTheHold)
 
 TEST_F(AcmTest, HysteresisBlocksMarginalUpSwitch)
 {
-    // 6.5 dB supports MODCOD 1 (5 + 1) but not 1 + hysteresis (7 dB needed to step up to it).
-    EXPECT_EQ(0, Run(6.5F, 20));
-    EXPECT_EQ(1, Run(7.0F, 3));
+    // 6 dB supports MODCOD 1 (4.5 + 1) but not 1 + hysteresis (6.5 dB needed to step up to it).
+    EXPECT_EQ(0, Run(6.0F, 20));
+    EXPECT_EQ(1, Run(6.5F, 3));
 }
 
 TEST_F(AcmTest, DropsImmediatelyToTheTarget)
@@ -138,14 +140,14 @@ TEST(AcmClosedLoopTest, LinkClimbsToTheBestModcodTheChannelAllows)
     satlink::amp::SimulatedCore1 core1;
     satlink::amp::ModemClient client(core1);
     ASSERT_EQ(0, client.SetAcm({true, 0, 4, 100, 100}));
-    // Noise sigma 0.25: Es/N0 about 12 dB, enough for 8PSK 2/3 (11.5 + 1 = 12.5 is not met,
-    // QPSK 3/4 needs 9) -> the loop must settle on MODCOD 2.
-    ASSERT_EQ(0, client.SetChannel(1024, 0x7FFF));
+    // Noise sigma 0.316: Es/N0 about 10 dB, not enough for 8PSK 2/3 (10 + 1 = 11), QPSK 3/4
+    // needs 8 -> the loop must settle on MODCOD 2.
+    ASSERT_EQ(0, client.SetChannel(1295, 0x7FFF));
     core1.Advance(20000);
     client.Poll(std::chrono::milliseconds{0});
     ASSERT_TRUE(client.LastStatus().has_value());
     EXPECT_EQ(2, client.LastStatus().value_or(satlink_msg_status_t{}).tx_modcod);
-    EXPECT_NEAR(12.0, client.LastStatus().value_or(satlink_msg_status_t{}).esn0_cdb / 100.0, 1.0);
+    EXPECT_NEAR(10.0, client.LastStatus().value_or(satlink_msg_status_t{}).esn0_cdb / 100.0, 1.0);
 
     // Clear sky: climbs to the top.
     ASSERT_EQ(0, client.SetChannel(0, 0x7FFF));

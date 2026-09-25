@@ -15,6 +15,7 @@
  * | 0x8020 | RTOS -> Linux | RX_FRAME: MODCOD, CRC result, Es/N0, 128 bytes               |
  * | 0x8030 | RTOS -> Linux | STATUS: link and firmware counters, once per second          |
  * | 0x8040 | RTOS -> Linux | LOG: level and text                                          |
+ * | 0x8050 | RTOS -> Linux | CONSTELLATION: MODCOD, up to 64 received symbols (I/Q int8)  |
  *
  * @implements SRS-AMP-003
  */
@@ -31,20 +32,24 @@
 extern "C" {
 #endif
 
-#define SATLINK_MSG_PING         (0x0001U)
-#define SATLINK_MSG_PONG         (0x8001U)
-#define SATLINK_MSG_MODEM_CONFIG (0x0010U)
-#define SATLINK_MSG_CHANNEL      (0x0011U)
-#define SATLINK_MSG_ACM_CONFIG   (0x0012U)
-#define SATLINK_MSG_TIME         (0x0013U)
-#define SATLINK_MSG_TX_FRAME     (0x0020U)
-#define SATLINK_MSG_RX_FRAME     (0x8020U)
-#define SATLINK_MSG_STATUS       (0x8030U)
-#define SATLINK_MSG_LOG          (0x8040U)
+#define SATLINK_MSG_PING          (0x0001U)
+#define SATLINK_MSG_PONG          (0x8001U)
+#define SATLINK_MSG_MODEM_CONFIG  (0x0010U)
+#define SATLINK_MSG_CHANNEL       (0x0011U)
+#define SATLINK_MSG_ACM_CONFIG    (0x0012U)
+#define SATLINK_MSG_TIME          (0x0013U)
+#define SATLINK_MSG_TX_FRAME      (0x0020U)
+#define SATLINK_MSG_RX_FRAME      (0x8020U)
+#define SATLINK_MSG_STATUS        (0x8030U)
+#define SATLINK_MSG_LOG           (0x8040U)
+#define SATLINK_MSG_CONSTELLATION (0x8050U)
 
-#define SATLINK_MSG_FRAME_BYTES (128U)
-#define SATLINK_MSG_LOG_MAX     (120U)
-#define SATLINK_MSG_MAX_BYTES   (160U)
+#define SATLINK_MSG_FRAME_BYTES          (128U)
+#define SATLINK_MSG_LOG_MAX              (120U)
+#define SATLINK_MSG_CONSTELLATION_POINTS (64U)
+/** Scale of the constellation points: 1.0 (unit symbol amplitude) = 64. */
+#define SATLINK_MSG_CONSTELLATION_SCALE (64.0F)
+#define SATLINK_MSG_MAX_BYTES           (160U)
 
 /** Loopback modes of MODEM_CONFIG. */
 typedef enum
@@ -124,6 +129,15 @@ typedef struct
     uint16_t cpu_load_permille;
 } satlink_msg_status_t;
 
+/** Symbols of a received frame after gain and carrier correction, spread over the frame. */
+typedef struct
+{
+    uint8_t modcod;
+    uint8_t count; /**< <= SATLINK_MSG_CONSTELLATION_POINTS */
+    int8_t i[SATLINK_MSG_CONSTELLATION_POINTS];
+    int8_t q[SATLINK_MSG_CONSTELLATION_POINTS];
+} satlink_msg_constellation_t;
+
 typedef struct
 {
     uint8_t level; /**< 0 debug, 1 info, 2 warning, 3 error */
@@ -162,6 +176,12 @@ satlink_status_t satlink_msg_decode_status(const uint8_t *in, size_t len, satlin
 /** LOG text is truncated to SATLINK_MSG_LOG_MAX characters; decoded text is NUL-terminated. */
 size_t satlink_msg_encode_log(const satlink_msg_log_t *m, uint8_t *out, size_t cap);
 satlink_status_t satlink_msg_decode_log(const uint8_t *in, size_t len, satlink_msg_log_t *m);
+
+/** CONSTELLATION: modcod, count, then count (I, Q) pairs. */
+size_t satlink_msg_encode_constellation(const satlink_msg_constellation_t *m, uint8_t *out,
+                                        size_t cap);
+satlink_status_t satlink_msg_decode_constellation(const uint8_t *in, size_t len,
+                                                  satlink_msg_constellation_t *m);
 
 /** Name of a message type for logs ("?" if unknown). */
 const char *satlink_msg_name(uint16_t type);

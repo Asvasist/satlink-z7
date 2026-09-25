@@ -167,6 +167,19 @@ TEST(PayloadManagerTest, FunctionsReachTheModem)
     EXPECT_EQ(1, h.manager.ModemStatus().value_or(satlink_msg_status_t{}).locked);
 }
 
+TEST(PayloadManagerTest, ReportsOfALinkChangeAreNotSentIntoItBlind)
+{
+    PayloadHarness h;
+    h.Run(8000); // clean channel: ACM at 8PSK 5/6
+    ASSERT_EQ(4, h.manager.ModemStatus().value_or(satlink_msg_status_t{}).tx_modcod);
+    // 9 dB: far too little for 8PSK 5/6. The reports of this TC must wait for the new link.
+    h.SendTc(8, 1, {static_cast<std::uint8_t>(Function::kSetChannel), 0x05, 0x0F, 0x7F, 0xFF});
+    h.Run(10000);
+    ASSERT_EQ(1U, h.ground.Find(1, 1).size());
+    ASSERT_EQ(1U, h.ground.Find(1, 7).size());
+    EXPECT_EQ(2, h.manager.ModemStatus().value_or(satlink_msg_status_t{}).tx_modcod);
+}
+
 TEST(PayloadManagerTest, IpDatagramsCrossTheLinkBothWays)
 {
     PayloadHarness h;

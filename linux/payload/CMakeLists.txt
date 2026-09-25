@@ -5,10 +5,12 @@
 add_library(satlink_payload STATIC
     src/leo_pass.cpp
     src/payload_manager.cpp
+    src/scpi_instrument.cpp
 )
 add_library(satlink::payload ALIAS satlink_payload)
 target_include_directories(satlink_payload PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(satlink_payload PUBLIC satlink::pus satlink::amp_client satlink::modem)
+target_link_libraries(satlink_payload PUBLIC satlink::pus satlink::amp_client satlink::modem
+                                             satlink::scpi)
 target_compile_features(satlink_payload PUBLIC cxx_std_20)
 satlink_target_defaults(satlink_payload)
 

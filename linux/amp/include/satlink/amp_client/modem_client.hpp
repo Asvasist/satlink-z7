@@ -64,6 +64,7 @@ class ModemClient
     std::function<void(const satlink_msg_status_t &)> on_status;
     std::function<void(const LogLine &)> on_log;
     std::function<void(const satlink_msg_ping_t &)> on_pong;
+    std::function<void(const satlink_msg_constellation_t &)> on_constellation;
 
     [[nodiscard]] std::uint32_t BadMessages() const
     {
@@ -73,6 +74,10 @@ class ModemClient
     {
         return last_status_;
     }
+    [[nodiscard]] const std::optional<satlink_msg_constellation_t> &LastConstellation() const
+    {
+        return last_constellation_;
+    }
 
   private:
     void Dispatch(const Message &msg);
@@ -80,6 +85,7 @@ class ModemClient
     MessagePort &port_;
     std::uint32_t bad_messages_ = 0;
     std::optional<satlink_msg_status_t> last_status_;
+    std::optional<satlink_msg_constellation_t> last_constellation_;
 };
 
 } // namespace satlink::amp

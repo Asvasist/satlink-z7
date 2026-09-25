@@ -1,6 +1,6 @@
 # Interface Control Document (ICD)
 
-Version 0.4 (Stage 5). Register maps and the address map are generated from
+Version 0.5 (Stage 6). Register maps and the address map are generated from
 [`icd/`](../../icd/); this page defines the conventions and the interfaces that are not
 registers.
 
@@ -13,7 +13,8 @@ registers.
 | Stream formats | this page | draft |
 | AMP IPC protocol v1 (Linux ↔ FreeRTOS) | this page, `libs/amp` | implemented (Stage 4) |
 | CAN protocol v1 (Linux ↔ housekeeping MCU) | this page, `libs/hkc_proto` | implemented (Stage 3) |
-| Ground interface: CCSDS/PUS over UDP, TM frames | this page, `libs/pus`, `linux/payload/.../mission.hpp` | implemented (Stage 5) |
+| Ground interface: CCSDS/PUS over UDP, TM frames | this page, `libs/pus`, `linux/payload/.../mission.hpp` | implemented (Stage 5, SID 4 in Stage 6) |
+| Instrument interface: SCPI over TCP | this page, `libs/scpi` | implemented (Stage 6) |
 
 ## 1. Conventions
 
@@ -66,6 +67,7 @@ Messages ([`libs/amp/include/satlink/amp/msg.h`](../../libs/amp/include/satlink/
 | 0x8020 | R → L | `RX_FRAME` | MODCOD (u8), CRC ok (u8), Es/N0 (s16, 0.01 dB), frame sequence (u8), 128 bytes |
 | 0x8030 | R → L | `STATUS` (1 Hz) | 12 counters (u32): uptime, frames ok / CRC error / header error, bit errors, bits checked, TX data / idle frames, DMA underruns, RX overruns, RX latency max / avg (µs); Es/N0 (s16), locked, TX MODCOD, ACM enabled, TX queue depth (u8 each), CPU load (u16, 0.1 %) |
 | 0x8040 | R → L | `LOG` | level (u8), text (up to 120 bytes) |
+| 0x8050 | R → L | `CONSTELLATION` (with `STATUS`, after a new frame) | MODCOD (u8), count N ≤ 64 (u8), N × (I s8, Q s8); symbols after gain and carrier correction, spread over the last frame's payload, 64 = unit amplitude |
 
 Linux user space reaches the rings through `/dev/satlink-amp` (one message per `read()` /
 `write()`, `struct satlink_amp_msg_hdr` + payload, see
@@ -150,6 +152,27 @@ Housekeeping structures (TM[3,25], after the SID byte):
 | 1 modem | locked u8, TX MODCOD u8, ACM u8, Es/N0 s16 (0.01 dB), frames ok u32, CRC errors u32, header errors u32, bit errors u32, bits checked u32, RX latency max u32 / avg u32 (µs), CPU load u16 (0.1 %), TX queue u8, firmware uptime u32 (ms) |
 | 2 link | pass active u8, elevation s16 (0.01°), range u16 (km), range rate s16 (m/s), model Es/N0 s16 (0.01 dB), frames sent u32, frames received u32, lost frames u32, packets u32, resyncs u32, IP down u32, IP up u32, packets dropped u32 |
 | 3 platform | HKC valid u8, die temperature s16 (0.01 °C), VCCINT u16, VCCAUX u16, VBRAM u16 (mV), HKC uptime u32 (s), HKC error flags u8, Core 1 state u8, Core 1 restarts u32 |
+| 4 constellation | MODCOD u8, count N u8, N × (I s8, Q s8) in 1/64 of the unit symbol amplitude. **Disabled by default**: 131 bytes per report, about 1 kbit/s at the default period, a third of the BPSK 1/2 downlink |
+
+SIDs 1 to 3 are enabled at start-up with a period of 1 s.
+
+## 6. Instrument interface (SCPI)
+
+TCP port **5025**, one program message per line (LF), responses terminated by LF. SCPI-1999 and
+IEEE 488.2 behaviour: [`libs/scpi`](../../libs/scpi/include/satlink/scpi/parser.hpp); command
+set: [`scpi_instrument.hpp`](../../linux/payload/include/satlink/payload/scpi_instrument.hpp).
+
+| Group | Commands |
+|---|---|
+| IEEE 488.2 | `*IDN?` `*RST` `*TST?` `*CLS` `*ESE` `*ESR?` `*OPC` `*OPC?` `*SRE` `*STB?` `*WAI` |
+| System | `SYSTem:ERRor[:NEXT]?` `SYSTem:ERRor:COUNt?` `SYSTem:ERRor:ALL?` `SYSTem:VERSion?` `SYSTem:COUNters?` |
+| Modem | `MODem:MODCod` `MODem:ACM[:STATe]` `MODem:ACM:LIMits` `MODem:ACM:MARGin` `MODem:ACM:HYSTeresis` `MODem:LOOPback` `MODem:RESTart` (settings also as queries) |
+| Channel emulator | `CHANnel:ESN0` `CHANnel:NOISe` `CHANnel:GAIN` `CHANnel:CLEar` |
+| Measurements | `MEASure:ESN0?` `MEASure:LOCK?` `MEASure:MODCod?` `MEASure:BER?` `MEASure:FER?` `MEASure:COUNters?` `MEASure:LATency?` `MEASure:LOAD?` `MEASure:RESet` |
+| Pass emulation | `PASS:STARt [<max el>[,<zenith Es/N0>[,<time lapse>]]]` `PASS:STOP` `PASS:STATe?` |
+
+`*IDN?` answers `SatLink-Z7,Payload Modem,<serial>,<version>`. Not-a-number is `9.91E+37`,
+±infinity `±9.9E+37`. BER and FER cover the window since the last `MEASure:RESet`.
 
 Events: 1 link locked, 2 link lost, 3 MODCOD changed (from u8, to u8), 4 AOS, 5 LOS,
 6 firmware log (text), 7 modem restarted.

@@ -7,6 +7,7 @@
  * @verifies SRS-AMP-003
  */
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <gtest/gtest.h>
 #include <memory>
@@ -147,6 +148,40 @@ TEST_F(ModemAppTest, StatusOncePerSecondWithIdleBer)
     EXPECT_EQ(200U, st.rx_latency_avg_us);
     EXPECT_EQ(123, st.cpu_load_permille);
     EXPECT_EQ(4U, st.dma_underruns);
+}
+
+TEST_F(ModemAppTest, ConstellationOfTheLastFrameGoesWithTheStatus)
+{
+    Configure(1); // QPSK: points at (+-45, +-45) in 1/64
+    satlink_modem_app_run_loopback(app_.get(), 4000);
+    satlink_modem_app_tick(app_.get(), 1000);
+    satlink_msg_constellation_t c{};
+    int found = 0;
+    for (const auto &s : sent_)
+    {
+        if (s.type == SATLINK_MSG_CONSTELLATION)
+        {
+            ++found;
+            ASSERT_EQ(SATLINK_OK,
+                      satlink_msg_decode_constellation(s.payload.data(), s.payload.size(), &c));
+        }
+    }
+    ASSERT_EQ(1, found);
+    EXPECT_EQ(1, c.modcod);
+    ASSERT_EQ(SATLINK_MSG_CONSTELLATION_POINTS, c.count);
+    for (std::size_t k = 0; k < c.count; ++k)
+    {
+        EXPECT_NEAR(45, std::abs(c.i[k]), 6);
+        EXPECT_NEAR(45, std::abs(c.q[k]), 6);
+    }
+    // Sent once per new frame, not repeated.
+    satlink_modem_app_tick(app_.get(), 2000);
+    int again = 0;
+    for (const auto &s : sent_)
+    {
+        again += s.type == SATLINK_MSG_CONSTELLATION ? 1 : 0;
+    }
+    EXPECT_EQ(1, again);
 }
 
 TEST_F(ModemAppTest, ChannelNoiseDegradesTheLinkAndReachesThePl)

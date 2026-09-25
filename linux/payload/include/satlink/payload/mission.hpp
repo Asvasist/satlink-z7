@@ -42,7 +42,11 @@ enum class HkStructure : std::uint8_t
     kModem = 1,
     kLink = 2,
     kPlatform = 3,
+    kConstellation = 4, ///< received symbols of a recent frame; disabled by default
 };
+
+/// Highest housekeeping structure ID.
+inline constexpr std::uint8_t kHkStructures = 4;
 
 /// ST[05] event IDs.
 enum class Event : std::uint16_t

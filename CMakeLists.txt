@@ -12,7 +12,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(satlink_z7
-    VERSION 0.1.0
+    VERSION 0.6.0
     DESCRIPTION "Software-defined satellite payload and link testbed on the Zynq-7020"
     HOMEPAGE_URL "https://github.com/Asvasist/satlink-z7"
     LANGUAGES C
@@ -95,12 +95,17 @@ endif()
 
 if(SATLINK_TARGET MATCHES "^(host|linux)$")
     add_subdirectory(libs/pus)
+    add_subdirectory(libs/scpi)
     add_subdirectory(linux/hal)
     add_subdirectory(linux/diag)
     add_subdirectory(linux/hkc)
     add_subdirectory(linux/bootctl)
     add_subdirectory(linux/amp)
     add_subdirectory(linux/payload)
+endif()
+if(SATLINK_TARGET STREQUAL "host")
+    add_subdirectory(host/gs/core)
+    add_subdirectory(tools/perf)
 endif()
 
 if(SATLINK_BUILD_TESTS)

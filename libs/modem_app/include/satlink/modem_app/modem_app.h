@@ -87,6 +87,8 @@ typedef struct
 
     /* RX */
     satlink_receiver_t rx;
+    satlink_msg_constellation_t constellation; /**< Symbols of the last frame, sent with STATUS. */
+    bool constellation_ready;
 
     /* software loopback */
     satlink_fir_t loop_tx_fir;

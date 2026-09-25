@@ -109,6 +109,20 @@ void ModemClient::Dispatch(const Message &msg)
         }
         return;
     }
+    case SATLINK_MSG_CONSTELLATION:
+    {
+        satlink_msg_constellation_t c{};
+        if (satlink_msg_decode_constellation(p, n, &c) != SATLINK_OK)
+        {
+            break;
+        }
+        last_constellation_ = c;
+        if (on_constellation)
+        {
+            on_constellation(c);
+        }
+        return;
+    }
     case SATLINK_MSG_PONG:
     {
         satlink_msg_ping_t pong{};

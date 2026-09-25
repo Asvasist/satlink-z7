@@ -252,8 +252,8 @@ std::optional<std::string> DescribeFrame(const satlink_can_frame_t &frame)
         static const char *const k_causes[] = {"power-on", "watchdog", "command"};
         const char *cause = (status.reset_cause < 3) ? k_causes[status.reset_cause] : "?";
         static const char *const k_hex = "0123456789ABCDEF";
-        const std::string flags = std::string("0x") + k_hex[status.error_flags >> 4U] +
-                                  k_hex[status.error_flags & 0x0FU];
+        const std::string flags =
+            std::string("0x") + k_hex[status.error_flags >> 4U] + k_hex[status.error_flags & 0x0FU];
         text << "status uptime=" << status.uptime_s << "s reset=" << cause
              << " switches=" << static_cast<int>(status.switches)
              << " cmds=" << static_cast<int>(status.cmd_count) << " errors=" << flags;

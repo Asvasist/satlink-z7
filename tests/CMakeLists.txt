@@ -126,3 +126,21 @@ satlink_add_gtest(test_payload_manager
     SOURCES unit/payload/test_payload_manager.cpp
     LIBS satlink::payload
 )
+
+# Stage 6: instrument control.
+satlink_add_gtest(test_scpi_parser
+    SOURCES unit/scpi/test_scpi_parser.cpp
+    LIBS satlink::scpi
+)
+satlink_add_gtest(test_scpi_instrument
+    SOURCES unit/payload/test_scpi_instrument.cpp
+    LIBS satlink::payload
+)
+satlink_add_gtest(test_mission_tm
+    SOURCES unit/gs/test_mission_tm.cpp
+    LIBS satlink::gs_core satlink::payload
+)
+satlink_add_gtest(test_posix_io
+    SOURCES unit/payload/test_posix_io.cpp
+    LIBS satlink::payload_io
+)

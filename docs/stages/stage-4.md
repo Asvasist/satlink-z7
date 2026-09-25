@@ -67,8 +67,8 @@ Core 0: Linux                                  Core 1: FreeRTOS                 
 | QEMU self-test: data frames through the IPC rings and the modem | 8 / 8, 0 bit errors in 96 256 idle bits |
 | CPU load of the modem at 6 kSym/s (QEMU) | about 4 % |
 
-Link performance per MODCOD over the whole Es/N0 range is measured in Stage 6 (performance
-report).
+Link performance per MODCOD over the whole Es/N0 range: [docs/performance](../performance/README.md)
+(Stage 6).
 
 ## To verify on the board
 
