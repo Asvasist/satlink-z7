@@ -12,13 +12,11 @@ constexpr std::uint32_t kSymbolsPerMs = 6; // 6 kSym/s
 constexpr std::uint32_t kStepMs = 10;      // like the firmware's 10 ms loop
 } // namespace
 
-SimulatedCore1::SimulatedCore1(ModcodSelector selector)
-    : app_(std::make_unique<satlink_modem_app_t>()), selector_(std::move(selector))
+SimulatedCore1::SimulatedCore1() : app_(std::make_unique<satlink_modem_app_t>())
 {
     satlink_modem_app_hw_t hw{};
     hw.ctx = this;
     hw.send_msg = &SendMsg;
-    hw.select_modcod = selector_ ? &SelectModcod : nullptr;
     satlink_modem_app_init(app_.get(), &hw);
     app_->config.loopback = SATLINK_LOOP_SOFTWARE;
 }
@@ -32,12 +30,6 @@ satlink_status_t SimulatedCore1::SendMsg(void *ctx, std::uint16_t type, const st
     // Called with mutex_ held (from Advance()).
     self->to_linux_.push_back({type, std::vector<std::uint8_t>(payload, payload + len)});
     return SATLINK_OK;
-}
-
-std::uint8_t SimulatedCore1::SelectModcod(void *ctx, float esn0_db, bool locked,
-                                          std::uint8_t current)
-{
-    return static_cast<SimulatedCore1 *>(ctx)->selector_(esn0_db, locked, current);
 }
 
 int SimulatedCore1::Send(std::uint16_t type, std::span<const std::uint8_t> payload)

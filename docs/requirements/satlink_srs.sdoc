@@ -28,14 +28,15 @@ AMP systems fail in subtle ways when two operating systems touch the same hardwa
 
 [REQUIREMENT]
 UID: SRS-SYS-003
-STATUS: Draft
+STATUS: Accepted
 TITLE: Telecommand and telemetry interface
 STATEMENT: >>>
 The payload shall accept telecommands and deliver telemetry as CCSDS Space Packets using PUS
 services over UDP/IP on Ethernet.
 <<<
 RATIONALE: >>>
-Standard space ground interface (ECSS-E-ST-70-41C). Detailed in Stage 5.
+Standard space ground interface (ECSS-E-ST-70-41C). Detailed in SRS-PUS-001..003 and
+SRS-PLM-001..003.
 <<<
 
 [REQUIREMENT]
@@ -51,14 +52,14 @@ Allows scripted control with pyVISA like a laboratory instrument. Detailed in St
 
 [REQUIREMENT]
 UID: SRS-SYS-005
-STATUS: Draft
+STATUS: Accepted
 TITLE: Adaptive coding and modulation
 STATEMENT: >>>
 The modem shall switch between MODCODs at frame boundaries based on the measured link quality.
 <<<
 RATIONALE: >>>
-Core function of a software-defined telecom payload. The physical layer supports it from
-Stage 4 (the MODCOD is signalled in every frame header); the controller follows in Stage 5.
+Core function of a software-defined telecom payload. The physical layer signals the MODCOD in
+every frame header (SRS-MDM-004); the controller is SRS-ACM-001.
 <<<
 
 [REQUIREMENT]
@@ -721,4 +722,122 @@ shall be available to Linux-side software on the host.
 <<<
 RATIONALE: >>>
 The port, scheduler, MMU, interrupts and IPC are verified on every push, not only on the board.
+<<<
+
+[REQUIREMENT]
+UID: SRS-ACM-001
+STATUS: Accepted
+TITLE: ACM controller
+STATEMENT: >>>
+The modem firmware shall choose the MODCOD of every frame from the receiver's Es/N0: the most
+efficient MODCOD whose threshold plus a configurable margin is met, stepping down immediately,
+stepping up one MODCOD at a time after a configurable hysteresis has held for several frames,
+and falling back to the most robust MODCOD without lock. Every change shall be reported.
+<<<
+RATIONALE: >>>
+Maximum throughput without frame loss as the channel changes, without oscillating on a noisy
+estimate.
+<<<
+
+[REQUIREMENT]
+UID: SRS-ACM-002
+STATUS: Accepted
+TITLE: LEO pass emulation
+STATEMENT: >>>
+The payload manager shall emulate a low-Earth-orbit pass (altitude, maximum elevation, elevation
+mask, zenith Es/N0, time lapse) by driving the channel emulator with the Es/N0 that the geometry
+and free-space loss give, and shall report elevation, range, range rate, AOS and LOS.
+<<<
+RATIONALE: >>>
+The adaptive link is exercised with the profile a real downlink sees, repeatably.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PUS-001
+STATUS: Accepted
+TITLE: Space packets with PUS-C headers
+STATEMENT: >>>
+Telecommands and telemetry shall be CCSDS Space Packets with PUS-C secondary headers (TM with CUC
+time) and a CRC-16 packet error control field; decoding shall reject wrong versions, types,
+lengths and CRCs.
+<<<
+RATIONALE: >>>
+Standard ground interface; any PUS-capable ground system can talk to the payload.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PUS-002
+STATUS: Accepted
+TITLE: TM transfer frames and virtual channels
+STATEMENT: >>>
+Downlinked packets shall be multiplexed into 128-byte CCSDS TM Transfer Frames on prioritised
+virtual channels with first-header pointers, packets may span frames, and the demultiplexer
+shall detect lost frames from the frame counters and resynchronise at the next packet boundary.
+<<<
+RATIONALE: >>>
+A frame lost to the channel costs only the packets it carried.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PUS-003
+STATUS: Accepted
+TITLE: PUS services
+STATEMENT: >>>
+The payload manager shall implement ST[01] request verification, ST[03] housekeeping (periodic,
+one-shot, enable, disable, interval), ST[05] event reporting, ST[08] function management and
+ST[17] are-you-alive, with the mission definitions of the ICD.
+<<<
+RATIONALE: >>>
+Operable like a flight payload with standard services.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PLM-001
+STATUS: Accepted
+TITLE: Telemetry through the modem link
+STATEMENT: >>>
+Telemetry shall reach the ground only through the modem link; while the link has no lock or the
+emulated satellite is below the horizon, packets shall be stored and downlinked when contact
+returns.
+<<<
+RATIONALE: >>>
+The ground sees exactly what a real downlink would deliver.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PLM-002
+STATUS: Accepted
+TITLE: Payload control functions
+STATEMENT: >>>
+The ground shall be able to set the MODCOD, configure ACM, set the channel emulator, start and
+stop a pass, select the loopback and restart the modem firmware through ST[08] functions.
+<<<
+RATIONALE: >>>
+Every link parameter is commandable for tests and demonstrations.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PLM-003
+STATUS: Accepted
+TITLE: Payload manager daemon
+STATEMENT: >>>
+The payload manager shall run as a non-blocking single-threaded daemon on Linux with UDP for the
+ground link, the AMP device or a simulated Core 1, TUN devices for IP and SocketCAN for
+housekeeping, and shall run unchanged on a Linux PC in simulation mode.
+<<<
+RATIONALE: >>>
+The same binary runs on the board, in demonstrations without a board, and under the
+hardware-in-the-loop tests.
+<<<
+
+[REQUIREMENT]
+UID: SRS-NET-001
+STATUS: Accepted
+TITLE: IP over the RF link
+STATEMENT: >>>
+IP datagrams between a satellite-side and a ground-side network interface shall be carried as
+Space Packets on their own virtual channel through the modem link in both directions.
+<<<
+RATIONALE: >>>
+Standard tools (ping, iperf3, ssh) run across the emulated space link.
 <<<

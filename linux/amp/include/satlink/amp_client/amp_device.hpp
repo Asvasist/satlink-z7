@@ -33,6 +33,11 @@ class AmpDevice final : public MessagePort
 
     int Start();
     int Stop();
+    /// File descriptor for poll() (readable when a message is waiting).
+    [[nodiscard]] int Fd() const
+    {
+        return fd_;
+    }
     int GetStatus(satlink_amp_status &status);
 
   private:

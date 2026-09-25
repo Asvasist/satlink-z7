@@ -36,7 +36,7 @@ STATUS_LINE = re.compile(r"^STATUS:\s*(\S+)\s*$", re.M)
 SCANNED_SUFFIXES = {
     ".c", ".h", ".cpp", ".hpp", ".py", ".cmake", ".yml", ".yaml", ".bb", ".bbappend",
     ".bbclass", ".conf", ".cfg", ".inc", ".sh", ".wks", ".cmd", ".dts", ".dtsi", ".v", ".sv",
-    ".vhd", ".tcl", ".xdc",
+    ".vhd", ".tcl", ".xdc", ".rs",
 }
 SCANNED_NAMES = {"CMakeLists.txt"}
 EXCLUDED_DIRS = {".git", "build", "_deps", "__pycache__", ".venv", "node_modules"}

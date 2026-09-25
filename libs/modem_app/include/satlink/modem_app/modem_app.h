@@ -13,7 +13,9 @@
  * ```
  *
  * With nothing queued the transmitter sends IDLE frames (PN9 payload), so the receiver always
- * has a signal to track and measures the bit error rate continuously.
+ * has a signal to track and measures the bit error rate continuously. With ACM enabled
+ * (ACM_CONFIG) the MODCOD of every frame follows the receiver's Es/N0 (libs/acm), and every
+ * change is reported to Linux as a LOG message.
  *
  * @implements SRS-MDM-007
  */
@@ -24,6 +26,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "satlink/acm/acm.h"
 #include "satlink/amp/msg.h"
 #include "satlink/common/status.h"
 #include "satlink/modem/channel.h"
@@ -51,9 +54,6 @@ typedef struct
     void (*set_channel)(void *ctx, uint16_t noise_level, uint16_t gain_q15);
     /** Select the PL loopback (payload_ctrl DIG_LOOPBACK). May be NULL. */
     void (*set_loopback)(void *ctx, uint8_t mode);
-    /** Pick the MODCOD for the next frame given the smoothed Es/N0 (dB) of the last received
-     *  frames. NULL: always the configured MODCOD. Used by the ACM controller (Stage 5). */
-    uint8_t (*select_modcod)(void *ctx, float esn0_db, bool locked, uint8_t current);
 } satlink_modem_app_hw_t;
 
 /** Counters beyond the receiver's own. */
@@ -73,6 +73,7 @@ typedef struct
     satlink_msg_modem_config_t config;
     satlink_msg_channel_t channel_cfg;
     bool acm_enabled;
+    satlink_acm_t acm; /**< Picks the MODCOD at every frame boundary while acm_enabled. */
 
     /* TX */
     uint8_t queue[SATLINK_MODEM_APP_TX_QUEUE][SATLINK_FRAME_INFO_BYTES];

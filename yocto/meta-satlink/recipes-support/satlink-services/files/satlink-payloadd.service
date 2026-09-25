@@ -1,0 +1,22 @@
+# The payload manager: PUS services over UDP, telemetry through the modem link, IP over the
+# link (TUN), housekeeping controller telemetry from can0.
+# @implements SRS-PLM-003
+[Unit]
+Description=SatLink-Z7 payload manager
+After=network-online.target satlink-can0.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sh -c 'test -e /dev/satlink-amp'
+ExecStart=/usr/bin/satlink-payloadd --tun --can can0 --loopback software
+ExecStartPost=/bin/sh -c 'sleep 1; /usr/bin/satlink-net-setup up'
+ExecStopPost=/usr/bin/satlink-net-setup down
+Restart=on-failure
+RestartSec=2
+# Let the firmware watchdog and the A/B confirmation see a crash loop.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

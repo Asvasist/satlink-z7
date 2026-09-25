@@ -10,6 +10,7 @@
 #include <cstring>
 #include <gtest/gtest.h>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "satlink/modem_app/modem_app.h"
@@ -33,7 +34,6 @@ class ModemAppTest : public ::testing::Test
         hw.send_msg = &SendMsg;
         hw.set_channel = &SetChannel;
         hw.set_loopback = &SetLoopback;
-        hw.select_modcod = &SelectModcod;
         ASSERT_EQ(SATLINK_OK, satlink_modem_app_init(app_.get(), &hw));
     }
 
@@ -52,12 +52,6 @@ class ModemAppTest : public ::testing::Test
     static void SetLoopback(void *ctx, std::uint8_t mode)
     {
         static_cast<ModemAppTest *>(ctx)->pl_loopback_ = mode;
-    }
-    static std::uint8_t SelectModcod(void *ctx, float esn0_db, bool locked, std::uint8_t)
-    {
-        auto *self = static_cast<ModemAppTest *>(ctx);
-        self->acm_calls_++;
-        return (locked && esn0_db > 20.0F) ? 4 : 0;
     }
 
     void Configure(std::uint8_t modcod, satlink_loopback_t loop = SATLINK_LOOP_SOFTWARE)
@@ -96,7 +90,6 @@ class ModemAppTest : public ::testing::Test
     std::uint16_t pl_noise_ = 0xFFFF;
     std::uint16_t pl_gain_ = 0;
     std::uint8_t pl_loopback_ = 0xFF;
-    int acm_calls_ = 0;
 };
 
 TEST_F(ModemAppTest, DataFramesTravelThroughTheSoftwareLoopback)
@@ -171,7 +164,7 @@ TEST_F(ModemAppTest, ChannelNoiseDegradesTheLinkAndReachesThePl)
     EXPECT_EQ(0U, stats.frames_ok);
 }
 
-TEST_F(ModemAppTest, AcmHookChoosesModcodPerFrame)
+TEST_F(ModemAppTest, AcmClimbsOnACleanLinkAndReportsEveryChange)
 {
     Configure(0);
     const satlink_msg_acm_config_t acm{true, 0, 4, 100, 50};
@@ -180,9 +173,30 @@ TEST_F(ModemAppTest, AcmHookChoosesModcodPerFrame)
         app_.get(), SATLINK_MSG_ACM_CONFIG, buf,
         static_cast<std::uint16_t>(satlink_msg_encode_acm_config(&acm, buf, 8)));
     EXPECT_TRUE(app_->acm_enabled);
-    satlink_modem_app_run_loopback(app_.get(), 10000);
-    EXPECT_GT(acm_calls_, 2);
-    EXPECT_EQ(4, app_->tx_modcod); // clean loopback: the hook raised it
+    EXPECT_FLOAT_EQ(0.5F, app_->acm.config.hysteresis_db);
+    satlink_modem_app_run_loopback(app_.get(), 20000);
+    EXPECT_EQ(4, app_->tx_modcod); // clean loopback: climbs to the top
+    std::vector<std::string> acm_logs;
+    for (const auto &s : sent_)
+    {
+        satlink_msg_log_t log{};
+        if (s.type == SATLINK_MSG_LOG &&
+            satlink_msg_decode_log(s.payload.data(), s.payload.size(), &log) == SATLINK_OK &&
+            std::string(log.text).rfind("ACM ", 0) == 0)
+        {
+            acm_logs.emplace_back(log.text);
+        }
+    }
+    ASSERT_EQ(4U, acm_logs.size());
+    EXPECT_EQ("ACM 0->1 up at", acm_logs[0].substr(0, 14));
+    EXPECT_EQ(" dB", acm_logs[0].substr(acm_logs[0].size() - 3));
+
+    // Disabling ACM returns to the configured MODCOD at once.
+    const satlink_msg_acm_config_t off{false, 0, 4, 100, 50};
+    satlink_modem_app_on_msg(
+        app_.get(), SATLINK_MSG_ACM_CONFIG, buf,
+        static_cast<std::uint16_t>(satlink_msg_encode_acm_config(&off, buf, 8)));
+    EXPECT_EQ(0, app_->tx_modcod);
 }
 
 TEST_F(ModemAppTest, PingIsAnsweredWithUptime)

@@ -254,8 +254,12 @@ static void finish_frame(satlink_receiver_t *rx)
             ? out.esn0_db
             : rx->stats.esn0_db + (ESN0_SMOOTHING * (out.esn0_db - rx->stats.esn0_db));
     rx->stats.esn0_db = smoothed;
-    rx->stats.locked = true;
-    rx->symbols_since_frame = 0U;
+    if (out.crc_ok)
+    {
+        /* Locked means frames get through, not just that headers decode. */
+        rx->stats.locked = true;
+        rx->symbols_since_frame = 0U;
+    }
     if (rx->cb != NULL)
     {
         rx->cb(rx->cb_ctx, &out);

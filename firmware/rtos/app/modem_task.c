@@ -98,7 +98,7 @@ static void drain_ipc(void)
 static void modem_task(void *arg)
 {
     (void)arg;
-    const satlink_modem_app_hw_t hw = {NULL, &send_msg, &set_channel, NULL, NULL};
+    const satlink_modem_app_hw_t hw = {NULL, &send_msg, &set_channel, NULL};
     (void)satlink_modem_app_init(&g_app, &hw);
     if (g_standalone)
     {

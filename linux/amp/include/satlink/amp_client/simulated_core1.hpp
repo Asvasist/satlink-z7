@@ -15,7 +15,6 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
-#include <functional>
 #include <memory>
 #include <mutex>
 
@@ -27,10 +26,7 @@ namespace satlink::amp {
 class SimulatedCore1 final : public MessagePort
 {
   public:
-    using ModcodSelector = std::function<std::uint8_t(float esn0_db, bool locked, std::uint8_t)>;
-
-    /// @p selector: the ACM decision (nullptr = no ACM, like firmware without it).
-    explicit SimulatedCore1(ModcodSelector selector = nullptr);
+    SimulatedCore1();
     ~SimulatedCore1() override;
 
     SimulatedCore1(const SimulatedCore1 &) = delete;
@@ -55,11 +51,9 @@ class SimulatedCore1 final : public MessagePort
   private:
     static satlink_status_t SendMsg(void *ctx, std::uint16_t type, const std::uint8_t *payload,
                                     std::uint16_t len);
-    static std::uint8_t SelectModcod(void *ctx, float esn0_db, bool locked, std::uint8_t current);
 
     mutable std::mutex mutex_;
     std::unique_ptr<satlink_modem_app_t> app_;
-    ModcodSelector selector_;
     std::deque<Message> to_linux_;
     std::deque<Message> to_rtos_;
     std::uint32_t now_ms_ = 0;

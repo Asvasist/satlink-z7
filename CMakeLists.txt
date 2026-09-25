@@ -7,6 +7,7 @@
 #
 # Pick a target with a preset:  cmake --preset host-debug   (see CMakePresets.json)
 # @implements SRS-BLD-001
+# @implements SRS-SYS-001
 
 cmake_minimum_required(VERSION 3.25)
 
@@ -76,6 +77,7 @@ if(NOT SATLINK_TARGET STREQUAL "hkc")
     add_subdirectory(libs/modem)
     add_subdirectory(libs/amp)
     add_subdirectory(libs/modem_app)
+    add_subdirectory(libs/acm)
 endif()
 
 if(SATLINK_TARGET MATCHES "^(host|rtos)$")
@@ -92,11 +94,13 @@ if(SATLINK_TARGET STREQUAL "rtos")
 endif()
 
 if(SATLINK_TARGET MATCHES "^(host|linux)$")
+    add_subdirectory(libs/pus)
     add_subdirectory(linux/hal)
     add_subdirectory(linux/diag)
     add_subdirectory(linux/hkc)
     add_subdirectory(linux/bootctl)
     add_subdirectory(linux/amp)
+    add_subdirectory(linux/payload)
 endif()
 
 if(SATLINK_BUILD_TESTS)

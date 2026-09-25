@@ -97,7 +97,11 @@ hw/              Vivado block design Tcl, RTL, constraints, filter coefficients
 icd/             interface control: address map and register maps (YAML)
 libs/common/     portable C11 library (CRC-16, CCSDS randomizer, ...)
 libs/regs/       generated register headers (C and C++)
-linux/           kernel drivers, C++ HAL, satlink-diag, payload manager        (Stage 2, 5)
+libs/modem/      software modem: FEC, mapping, framing, receiver, channel model (Stage 4)
+libs/modem_app/  Core 1 modem application; libs/acm: adaptive coding and modulation
+libs/amp/        inter-core rings and messages; libs/hkc_proto, libs/mcp2515: housekeeping CAN
+libs/pus/        CCSDS space packets, PUS-C, TM transfer frames (Stage 5)
+linux/           kernel drivers, HAL, tools, AMP client, payload manager      (Stages 2-5)
 tests/           unit tests
 tools/           register-map generator, traceability matrix
 yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOOT.BIN recipe
@@ -128,7 +132,7 @@ yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOO
 | 2 | Linux drivers, C++ HAL, diagnostics, board bring-up | **in progress** |
 | 3 | Housekeeping MCU, CAN bootloader, secure A/B boot | **software done**, hardware pending ([details](docs/stages/stage-3.md)) |
 | 4 | AMP and real-time modem (FreeRTOS, FEC, synchronization) | **software done**, boots in QEMU; board pending ([details](docs/stages/stage-4.md)) |
-| 5 | Adaptive link (ACM, LEO pass emulation) and on-board networking | planned |
+| 5 | Adaptive link (ACM, LEO pass emulation) and on-board networking | **software done**, runs in simulation; board pending ([details](docs/stages/stage-5.md)) |
 | 6 | SCPI server, Qt ground station, Rust CLI, HIL tests, performance report | planned |
 
 Stage 1 exit criteria and checklist: [docs/stages/stage-1.md](docs/stages/stage-1.md).

@@ -1,5 +1,5 @@
 SUMMARY = "SatLink-Z7 user-space tools"
-DESCRIPTION = "satlink-diag (PL blocks and codec), satlink-hkc (housekeeping controller over CAN) and satlink-bootctl (A/B boot slots)."
+DESCRIPTION = "satlink-diag (PL blocks and codec), satlink-hkc (housekeeping controller over CAN), satlink-bootctl (A/B boot slots), satlink-amp (Core 1 firmware) and satlink-payloadd (payload manager)."
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 # @implements SRS-DIAG-001

@@ -92,21 +92,26 @@ TEST(ModemClientTest, PingAnsweredAfterTheFirmwareRuns)
     EXPECT_EQ(250U, uptime);
 }
 
-TEST(ModemClientTest, AcmSelectorDrivesTheTransmitter)
+TEST(ModemClientTest, AcmConfigReachesTheFirmwareController)
 {
-    int calls = 0;
-    SimulatedCore1 core1([&](float esn0, bool locked, std::uint8_t) -> std::uint8_t {
-        ++calls;
-        return locked && esn0 > 20.0F ? 4 : 1;
-    });
+    SimulatedCore1 core1;
     ModemClient client(core1);
+    std::vector<LogLine> logs;
+    client.on_log = [&](const LogLine &l) { logs.push_back(l); };
     ASSERT_EQ(0, client.SetAcm({true, 0, 4, 100, 50}));
-    core1.Advance(3000);
-    client.Poll(std::chrono::milliseconds{0});
-    EXPECT_GT(calls, 5);
+    core1.Advance(4000);
+    while (client.Poll(std::chrono::milliseconds{0}) > 0)
+    {
+    }
     ASSERT_TRUE(client.LastStatus().has_value());
     EXPECT_EQ(4, client.LastStatus().value_or(satlink_msg_status_t{}).tx_modcod);
     EXPECT_EQ(1, client.LastStatus().value_or(satlink_msg_status_t{}).acm_enabled);
+    int acm_lines = 0;
+    for (const auto &l : logs)
+    {
+        acm_lines += l.text.rfind("ACM ", 0) == 0 ? 1 : 0;
+    }
+    EXPECT_EQ(4, acm_lines); // ACM starts at the most robust MODCOD: four steps up
 }
 
 TEST(ModemClientTest, MalformedMessagesAreCounted)

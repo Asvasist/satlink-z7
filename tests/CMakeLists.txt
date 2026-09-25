@@ -104,3 +104,25 @@ satlink_add_gtest(test_modem_client
     SOURCES unit/amp/test_modem_client.cpp
     LIBS satlink::amp_client
 )
+
+# Stage 5: adaptive link, payload management.
+satlink_add_gtest(test_acm
+    SOURCES unit/modem/test_acm.cpp
+    LIBS satlink::acm satlink::amp_client
+)
+satlink_add_gtest(test_space_packet
+    SOURCES unit/pus/test_space_packet.cpp
+    LIBS satlink::pus
+)
+satlink_add_gtest(test_tm_frame
+    SOURCES unit/pus/test_tm_frame.cpp
+    LIBS satlink::pus
+)
+satlink_add_gtest(test_leo_pass
+    SOURCES unit/payload/test_leo_pass.cpp
+    LIBS satlink::payload
+)
+satlink_add_gtest(test_payload_manager
+    SOURCES unit/payload/test_payload_manager.cpp
+    LIBS satlink::payload
+)

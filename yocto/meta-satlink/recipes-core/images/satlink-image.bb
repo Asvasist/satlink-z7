@@ -25,4 +25,6 @@ IMAGE_INSTALL += " \
     dtc \
     devmem2 \
     htop \
+    iperf3 \
+    tcpdump \
 "

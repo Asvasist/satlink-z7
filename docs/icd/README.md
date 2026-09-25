@@ -1,6 +1,6 @@
 # Interface Control Document (ICD)
 
-Version 0.3 (Stage 4). Register maps and the address map are generated from
+Version 0.4 (Stage 5). Register maps and the address map are generated from
 [`icd/`](../../icd/); this page defines the conventions and the interfaces that are not
 registers.
 
@@ -13,6 +13,7 @@ registers.
 | Stream formats | this page | draft |
 | AMP IPC protocol v1 (Linux ↔ FreeRTOS) | this page, `libs/amp` | implemented (Stage 4) |
 | CAN protocol v1 (Linux ↔ housekeeping MCU) | this page, `libs/hkc_proto` | implemented (Stage 3) |
+| Ground interface: CCSDS/PUS over UDP, TM frames | this page, `libs/pus`, `linux/payload/.../mission.hpp` | implemented (Stage 5) |
 
 ## 1. Conventions
 
@@ -88,3 +89,67 @@ Linux user space reaches the rings through `/dev/satlink-amp` (one message per `
 
 Application images: 32-byte header (magic `SLHK`, load address, entry, size, version, payload
 and header CRC-32), see [`image.h`](../../libs/hkc_proto/include/satlink/hkc/image.h).
+
+## 5. Ground interface (CCSDS Space Packets, PUS-C)
+
+Telecommands: UDP to the payload, port **10025**, one Space Packet per datagram. Telemetry: UDP
+to the ground station, port **10026** (to the configured station, or to the sender of the last
+TC). Packets: CCSDS 133.0-B with PUS-C (ECSS-E-ST-70-41C) secondary headers and a CRC-16-CCITT
+packet error control field ([`libs/pus`](../../libs/pus/include/satlink/pus/space_packet.hpp)).
+All fields big-endian.
+
+| Item | Value |
+|---|---|
+| Spacecraft ID (TM frames) | 0x2A7 |
+| APID of the payload manager (TC and TM) | 0x010 |
+| IP datagrams satellite → ground / ground → satellite | APID 0x3F0 / 0x3F1 (no secondary header) |
+| Ground station source/destination ID | 0x0001 |
+| TM time | CUC, 4 + 2 bytes, epoch 2000-01-01T00:00:00Z |
+
+**Downlink.** TM packets travel through the modem: packed into 128-byte TM Transfer Frames
+(CCSDS 132.0-B, [`tm_frame.hpp`](../../libs/pus/include/satlink/pus/tm_frame.hpp)) on
+virtual channel 0, IP packets on VC 1, idle frames on VC 7; one transfer frame is one modem
+frame. After the RF loopback the frames are demultiplexed and the TM is forwarded over UDP. While
+the link is down (no lock, or the emulated satellite below the horizon) packets are stored and
+downlinked when contact returns. Telecommands reach the payload over Ethernet directly.
+
+**Services** (APID 0x010):
+
+| TC | TM | Meaning |
+|---|---|---|
+| — | 1,1 / 1,2 | acceptance success / failure (TC packet ID u16, sequence control u16, failure code u16) |
+| — | 1,7 / 1,8 | completion success / failure (same layout) |
+| 3,5 / 3,6 | — | enable / disable periodic housekeeping: N (u8), SIDs (u8 each) |
+| 3,27 | 3,25 | one-shot report: N (u8), SIDs |
+| 3,31 | — | collection interval: SID (u8), period ms (u32, 100..60000) |
+| — | 3,25 | housekeeping report: SID (u8), parameters (below) |
+| — | 5,1..5,4 | event (informative, low, medium, high): event ID (u16), auxiliary data |
+| 8,1 | — | perform function: function ID (u8), arguments (below) |
+| 17,1 | 17,2 | are-you-alive |
+
+Success reports are sent when the TC's acknowledgement flags ask for them; failures always.
+Failure codes: 1 unknown service, 2 unknown subtype, 3 bad data, 4 unknown function, 5 modem
+error, 6 bad APID, 7 corrupt packet.
+
+Functions (TC[8,1]):
+
+| ID | Name | Arguments |
+|---|---|---|
+| 1 | SET_MODCOD | MODCOD u8 (turns ACM off) |
+| 2 | SET_ACM | enable u8, min u8, max u8, margin s16 (0.01 dB), hysteresis s16 (0.01 dB) |
+| 3 | SET_CHANNEL | noise level u16, gain Q15 u16 (stops a running pass) |
+| 4 | START_PASS | max elevation u16 (0.01°, 6..90°), zenith Es/N0 s16 (0.01 dB), time scale u8 |
+| 5 | STOP_PASS | — |
+| 6 | SET_LOOPBACK | 0 analog, 1 digital, 2 software |
+| 7 | RESTART_MODEM | — (restarts the Core 1 firmware) |
+
+Housekeeping structures (TM[3,25], after the SID byte):
+
+| SID | Parameters |
+|---|---|
+| 1 modem | locked u8, TX MODCOD u8, ACM u8, Es/N0 s16 (0.01 dB), frames ok u32, CRC errors u32, header errors u32, bit errors u32, bits checked u32, RX latency max u32 / avg u32 (µs), CPU load u16 (0.1 %), TX queue u8, firmware uptime u32 (ms) |
+| 2 link | pass active u8, elevation s16 (0.01°), range u16 (km), range rate s16 (m/s), model Es/N0 s16 (0.01 dB), frames sent u32, frames received u32, lost frames u32, packets u32, resyncs u32, IP down u32, IP up u32, packets dropped u32 |
+| 3 platform | HKC valid u8, die temperature s16 (0.01 °C), VCCINT u16, VCCAUX u16, VBRAM u16 (mV), HKC uptime u32 (s), HKC error flags u8, Core 1 state u8, Core 1 restarts u32 |
+
+Events: 1 link locked, 2 link lost, 3 MODCOD changed (from u8, to u8), 4 AOS, 5 LOS,
+6 firmware log (text), 7 modem restarted.

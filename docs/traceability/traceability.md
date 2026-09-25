@@ -3,12 +3,14 @@
 
 Generated from `@implements` / `@verifies` tags in the source tree.
 
-- Requirements: 57 (54 accepted)
-- Accepted and implemented: 52 / 54
-- Accepted and verified by an automated test: 37 / 54
+- Requirements: 66 (65 accepted)
+- Accepted and implemented: 64 / 65
+- Accepted and verified by an automated test: 45 / 65
 
 | UID | Title | Status | Implemented by | Verified by |
 |---|---|---|---|---|
+| SRS-ACM-001 | ACM controller | Accepted | `libs/acm/CMakeLists.txt`<br>`libs/acm/include/satlink/acm/acm.h`<br>`libs/acm/src/acm.c` | `tests/unit/modem/test_acm.cpp` |
+| SRS-ACM-002 | LEO pass emulation | Accepted | `linux/payload/include/satlink/payload/leo_pass.hpp`<br>`linux/payload/src/leo_pass.cpp` | `tests/unit/payload/test_leo_pass.cpp` |
 | SRS-AMP-001 | FreeRTOS firmware on Core 1 | Accepted | `firmware/rtos/CMakeLists.txt`<br>`firmware/rtos/app/main.c`<br>`firmware/rtos/app/modem_task.c`<br>`firmware/rtos/bsp/gic.c`<br>`firmware/rtos/bsp/syscalls.c`<br>`firmware/rtos/bsp/timer.c`<br>`firmware/rtos/bsp/uart.c`<br>`firmware/rtos/include/FreeRTOSConfig.h`<br>`firmware/rtos/include/rtos/bsp.h`<br>`firmware/rtos/include/rtos/tasks.h`<br>`firmware/rtos/include/version.h`<br>`linux/drivers/satlink_amp/satlink,amp.yaml`<br>`linux/drivers/satlink_amp/satlink_amp_drv.c`<br>`yocto/meta-satlink/recipes-bsp/satlink-rtos-firmware/satlink-rtos-firmware_1.0.bb`<br>`yocto/meta-satlink/recipes-kernel/satlink-amp/satlink-amp_1.0.bb` | `tools/rtos/qemu_selftest.py` |
 | SRS-AMP-002 | Inter-core message rings | Accepted | `firmware/rtos/app/ipc.c`<br>`firmware/rtos/include/rtos/ipc.h`<br>`libs/amp/CMakeLists.txt`<br>`libs/amp/include/satlink/amp/ipc_ring.h`<br>`libs/amp/include/satlink/amp/shm.h`<br>`libs/amp/src/ipc_ring.c`<br>`linux/drivers/satlink_amp/ipc_ring_kernel.c`<br>`linux/drivers/satlink_amp/satlink_amp_drv.c` | `tests/unit/amp/test_ipc_ring.cpp` |
 | SRS-AMP-003 | Message set and Linux interface | Accepted | `libs/amp/include/satlink/amp/msg.h`<br>`libs/amp/src/msg.c`<br>`linux/amp/CMakeLists.txt`<br>`linux/amp/include/satlink/amp_client/amp_device.hpp`<br>`linux/amp/include/satlink/amp_client/message_port.hpp`<br>`linux/amp/include/satlink/amp_client/modem_client.hpp`<br>`linux/amp/src/amp_device.cpp`<br>`linux/amp/src/amp_tool.cpp`<br>`linux/amp/src/modem_client.cpp`<br>`linux/include/uapi/satlink/amp.h` | `tests/unit/amp/test_modem_client.cpp`<br>`tests/unit/amp/test_msg.cpp`<br>`tests/unit/modem/test_modem_app.cpp` |
@@ -59,10 +61,17 @@ Generated from `@implements` / `@verifies` tags in the source tree.
 | SRS-MDM-005 | Receiver performance | Accepted | `libs/modem/include/satlink/modem/receiver.h`<br>`libs/modem/src/receiver.c` | `tests/unit/modem/test_receiver.cpp` |
 | SRS-MDM-006 | Channel model | Accepted | `libs/modem/include/satlink/modem/channel.h`<br>`libs/modem/src/channel.c` | `tests/unit/modem/test_receiver.cpp` |
 | SRS-MDM-007 | Modem application | Accepted | `firmware/rtos/app/modem_task.c`<br>`libs/modem_app/CMakeLists.txt`<br>`libs/modem_app/include/satlink/modem_app/modem_app.h`<br>`libs/modem_app/src/modem_app.c` | `tests/unit/modem/test_modem_app.cpp` |
+| SRS-NET-001 | IP over the RF link | Accepted | `linux/payload/src/payload_manager.cpp`<br>`linux/payload/src/posix_io.cpp`<br>`yocto/meta-satlink/recipes-support/satlink-services/files/satlink-net-setup.sh` | `tests/unit/payload/test_payload_manager.cpp` |
 | SRS-PER-001 | Audio codec configuration from Linux | Accepted | `linux/dts/zybo-z7-satlink-ps.dtsi`<br>`linux/hal/include/satlink/hal/ssm2603.hpp`<br>`linux/hal/src/ssm2603.cpp` | `tests/unit/hal/test_diag.cpp`<br>`tests/unit/hal/test_ssm2603_hal.cpp` |
 | SRS-PER-002 | CAN through SocketCAN | Accepted | `linux/dts/zybo-z7-satlink-ps.dtsi`<br>`linux/hal/include/satlink/hal/socket_can_bus.hpp`<br>`linux/hal/src/socket_can_bus.cpp`<br>`linux/scripts/can-up.sh` | `linux/scripts/can-loopback-test.sh` |
-| SRS-SYS-001 | Processor partitioning | Accepted | - | - |
+| SRS-PLM-001 | Telemetry through the modem link | Accepted | `linux/payload/CMakeLists.txt`<br>`linux/payload/include/satlink/payload/interfaces.hpp`<br>`linux/payload/include/satlink/payload/payload_manager.hpp`<br>`linux/payload/src/payload_manager.cpp` | `tests/unit/payload/test_payload_manager.cpp` |
+| SRS-PLM-002 | Payload control functions | Accepted | `linux/payload/src/payload_manager.cpp` | `tests/unit/payload/test_payload_manager.cpp` |
+| SRS-PLM-003 | Payload manager daemon | Accepted | `linux/payload/include/satlink/payload/posix_io.hpp`<br>`linux/payload/src/main.cpp`<br>`linux/payload/src/posix_io.cpp`<br>`yocto/meta-satlink/recipes-support/satlink-services/satlink-services_1.0.bb` | - |
+| SRS-PUS-001 | Space packets with PUS-C headers | Accepted | `libs/pus/CMakeLists.txt`<br>`libs/pus/include/satlink/pus/space_packet.hpp`<br>`libs/pus/src/space_packet.cpp` | `tests/unit/pus/test_space_packet.cpp` |
+| SRS-PUS-002 | TM transfer frames and virtual channels | Accepted | `libs/pus/include/satlink/pus/tm_frame.hpp`<br>`libs/pus/src/tm_frame.cpp` | `tests/unit/pus/test_tm_frame.cpp` |
+| SRS-PUS-003 | PUS services | Accepted | `linux/payload/include/satlink/payload/mission.hpp` | `tests/unit/payload/test_payload_manager.cpp` |
+| SRS-SYS-001 | Processor partitioning | Accepted | `CMakeLists.txt` | - |
 | SRS-SYS-002 | Exclusive resource ownership | Accepted | `icd/address_map.yaml`<br>`linux/dts/zybo-z7-satlink-amp.dtsi` | `tools/regmap/tests/test_regmap_gen.py` |
-| SRS-SYS-003 | Telecommand and telemetry interface | Draft | - | - |
+| SRS-SYS-003 | Telecommand and telemetry interface | Accepted | `linux/payload/include/satlink/payload/payload_manager.hpp` | - |
 | SRS-SYS-004 | Instrument control interface | Draft | - | - |
-| SRS-SYS-005 | Adaptive coding and modulation | Draft | - | - |
+| SRS-SYS-005 | Adaptive coding and modulation | Accepted | `libs/acm/include/satlink/acm/acm.h` | - |

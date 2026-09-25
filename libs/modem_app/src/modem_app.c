@@ -54,6 +54,61 @@ static void on_rx_frame(void *ctx, const satlink_rx_frame_t *frame)
     }
 }
 
+static void on_acm_change(void *ctx, uint8_t from, uint8_t to, satlink_acm_reason_t reason,
+                          float esn0_db)
+{
+    static const char *const k_reason[] = {"up", "down", "lock lost"};
+    satlink_modem_app_t *app = (satlink_modem_app_t *)ctx;
+    /* "ACM 1->2 up at 12.3 dB" without printf (the firmware has no stdio). */
+    char text[48];
+    size_t n = 0U;
+    const char *prefix = "ACM ";
+    for (size_t i = 0U; prefix[i] != '\0'; ++i)
+    {
+        text[n++] = prefix[i];
+    }
+    text[n++] = (char)('0' + (char)from);
+    text[n++] = '-';
+    text[n++] = '>';
+    text[n++] = (char)('0' + (char)to);
+    text[n++] = ' ';
+    const char *why = k_reason[(uint32_t)reason < 3U ? (uint32_t)reason : 0U];
+    for (size_t i = 0U; why[i] != '\0'; ++i)
+    {
+        text[n++] = why[i];
+    }
+    const char *at = " at ";
+    for (size_t i = 0U; at[i] != '\0'; ++i)
+    {
+        text[n++] = at[i];
+    }
+    int32_t tenths = (int32_t)lrintf(esn0_db * 10.0F);
+    if (tenths < 0)
+    {
+        text[n++] = '-';
+        tenths = -tenths;
+    }
+    char digits[8];
+    size_t d = 0U;
+    uint32_t whole = (uint32_t)tenths / 10U;
+    do
+    {
+        digits[d++] = (char)('0' + (char)(whole % 10U));
+        whole /= 10U;
+    } while ((whole != 0U) && (d < sizeof(digits)));
+    while (d > 0U)
+    {
+        text[n++] = digits[--d];
+    }
+    text[n++] = '.';
+    text[n++] = (char)('0' + (char)((uint32_t)tenths % 10U));
+    text[n++] = ' ';
+    text[n++] = 'd';
+    text[n++] = 'B';
+    text[n] = '\0';
+    log_msg(app, 1U, text);
+}
+
 float satlink_modem_app_noise_sigma(uint16_t noise_level)
 {
     return (float)noise_level / 4096.0F;
@@ -83,6 +138,8 @@ satlink_status_t satlink_modem_app_init(satlink_modem_app_t *app, const satlink_
     app->channel_cfg.noise_level = 0U;
     app->channel_cfg.gain_q15 = 0x7FFFU;
     app->acm_enabled = false;
+    const satlink_acm_config_t acm_cfg = satlink_acm_default_config();
+    (void)satlink_acm_init(&app->acm, &acm_cfg, &on_acm_change, app);
     app->q_head = 0U;
     app->q_tail = 0U;
     app->tx_len = 0U;
@@ -174,7 +231,21 @@ void satlink_modem_app_on_msg(satlink_modem_app_t *app, uint16_t type, const uin
             bad_msg(app, "bad ACM_CONFIG");
             break;
         }
-        app->acm_enabled = acm.enabled && (app->hw.select_modcod != NULL);
+        satlink_acm_config_t cfg = satlink_acm_default_config();
+        cfg.min_modcod = acm.min_modcod;
+        cfg.max_modcod = acm.max_modcod;
+        cfg.margin_db = (float)acm.margin_cdb / 100.0F;
+        cfg.hysteresis_db = (float)acm.hysteresis_cdb / 100.0F;
+        if (satlink_acm_configure(&app->acm, &cfg) != SATLINK_OK)
+        {
+            bad_msg(app, "bad ACM_CONFIG");
+            break;
+        }
+        app->acm_enabled = acm.enabled;
+        if (!acm.enabled)
+        {
+            app->tx_modcod = app->config.modcod;
+        }
         break;
     }
     case SATLINK_MSG_TIME:
@@ -217,11 +288,7 @@ static void next_frame(satlink_modem_app_t *app)
     uint8_t modcod = app->config.modcod;
     if (app->acm_enabled)
     {
-        modcod = app->hw.select_modcod(app->hw.ctx, stats.esn0_db, stats.locked, app->tx_modcod);
-        if (satlink_modcod_get(modcod) == NULL)
-        {
-            modcod = 0U;
-        }
+        modcod = satlink_acm_update(&app->acm, stats.esn0_db, stats.locked);
     }
     app->tx_modcod = modcod;
 
