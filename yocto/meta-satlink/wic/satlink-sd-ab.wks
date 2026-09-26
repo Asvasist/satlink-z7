@@ -1,0 +1,15 @@
+# SatLink-Z7 SD card layout with A/B slots (SATLINK_SECURE_BOOT = "1").
+#
+#   p1  boot    FAT   BOOT.BIN (FSBL + bitstream + U-Boot) and uboot.env
+#   p2  root_a  ext4  slot A: root file system with /boot/fitImage (signed kernel + DTB)
+#   p3  root_b  ext4  slot B: same layout; updates always go to the slot that is not running
+#   p5  golden  ext4  factory copy, mounted read-only, never updated (last-resort fallback)
+#   p6  data    ext4  persistent data (/data), kept across updates
+#
+# p4 is the extended partition that holds p5 and p6 (MBR: the Zynq BootROM cannot read GPT).
+# @implements SRS-BOOT-003
+part /boot/sd --source bootimg-partition --ondisk mmcblk0 --fstype=vfat --label boot --active --align 4096 --size 128M
+part /        --source rootfs --ondisk mmcblk0 --fstype=ext4 --label root_a --align 4096 --size 1024M
+part          --source rootfs --ondisk mmcblk0 --fstype=ext4 --label root_b --align 4096 --size 1024M
+part          --source rootfs --ondisk mmcblk0 --fstype=ext4 --label golden --align 4096 --size 1024M
+part /data    --ondisk mmcblk0 --fstype=ext4 --label data --align 4096 --size 256M

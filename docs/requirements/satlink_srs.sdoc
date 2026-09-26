@@ -28,36 +28,39 @@ AMP systems fail in subtle ways when two operating systems touch the same hardwa
 
 [REQUIREMENT]
 UID: SRS-SYS-003
-STATUS: Draft
+STATUS: Accepted
 TITLE: Telecommand and telemetry interface
 STATEMENT: >>>
 The payload shall accept telecommands and deliver telemetry as CCSDS Space Packets using PUS
 services over UDP/IP on Ethernet.
 <<<
 RATIONALE: >>>
-Standard space ground interface (ECSS-E-ST-70-41C). Detailed in Stage 5.
+Standard space ground interface (ECSS-E-ST-70-41C). Detailed in SRS-PUS-001..003 and
+SRS-PLM-001..003.
 <<<
 
 [REQUIREMENT]
 UID: SRS-SYS-004
-STATUS: Draft
+STATUS: Accepted
 TITLE: Instrument control interface
 STATEMENT: >>>
 The payload shall provide a SCPI command interface on TCP port 5025.
 <<<
 RATIONALE: >>>
-Allows scripted control with pyVISA like a laboratory instrument. Detailed in Stage 6.
+Allows scripted control with pyVISA like a laboratory instrument. Detailed in SRS-SCPI-001 and
+SRS-SCPI-002.
 <<<
 
 [REQUIREMENT]
 UID: SRS-SYS-005
-STATUS: Draft
+STATUS: Accepted
 TITLE: Adaptive coding and modulation
 STATEMENT: >>>
 The modem shall switch between MODCODs at frame boundaries based on the measured link quality.
 <<<
 RATIONALE: >>>
-Core function of a software-defined telecom payload. Detailed in Stages 4 and 5.
+Core function of a software-defined telecom payload. The physical layer signals the MODCOD in
+every frame header (SRS-MDM-004); the controller is SRS-ACM-001.
 <<<
 
 [REQUIREMENT]
@@ -175,7 +178,7 @@ UID: SRS-ICD-004
 STATUS: Accepted
 TITLE: AMP memory partitioning
 STATEMENT: >>>
-The ICD shall define non-overlapping DDR partitions for Linux, FreeRTOS, RPMsg shared memory and
+The ICD shall define non-overlapping DDR partitions for Linux, FreeRTOS, the IPC shared memory and
 modem DMA buffers, all inside physical DDR.
 <<<
 RATIONALE: >>>
@@ -216,6 +219,18 @@ services, and build for all four targets.
 <<<
 RATIONALE: >>>
 The same code runs on Linux, FreeRTOS, the MicroBlaze V and the host test build.
+<<<
+
+[REQUIREMENT]
+UID: SRS-LIB-004
+STATUS: Accepted
+TITLE: CRC-32
+STATEMENT: >>>
+The common library shall provide CRC-32 (IEEE 802.3, reflected, initial value and final XOR
+0xFFFFFFFF) for firmware image checks, bit-compatible with zlib's crc32().
+<<<
+RATIONALE: >>>
+Host tools can compute image checksums with standard libraries.
 <<<
 
 [REQUIREMENT]
@@ -280,14 +295,29 @@ Baseline boot chain; hardened in Stage 3.
 
 [REQUIREMENT]
 UID: SRS-BOOT-002
-STATUS: Draft
+STATUS: Accepted
 TITLE: Secure A/B boot
 STATEMENT: >>>
-U-Boot shall boot only signed FIT images, keep A and B slots, count boot attempts and roll back
-to the last good slot automatically.
+U-Boot shall boot only signed FIT images, keep A and B slots, count boot attempts of a slot on
+trial and roll back to the other slot automatically once the boot limit is exceeded. Linux shall
+end a trial only after the system reached a healthy state, and shall install updates only into
+the slot that is not running.
 <<<
 RATIONALE: >>>
-Detailed in Stage 3.
+An update must never leave the payload unbootable, and an unsigned or corrupted kernel must
+never run.
+<<<
+
+[REQUIREMENT]
+UID: SRS-BOOT-003
+STATUS: Accepted
+TITLE: Golden image fallback
+STATEMENT: >>>
+The SD card shall hold a read-only golden copy of the factory root file system that updates
+never modify. U-Boot shall boot it when both slots have failed.
+<<<
+RATIONALE: >>>
+Last line of defence: the payload stays reachable for a new update even after two bad slots.
 <<<
 
 [REQUIREMENT]
@@ -428,4 +458,518 @@ against mocks.
 <<<
 RATIONALE: >>>
 First thing to run on a fresh board, and its logic is checked in CI without hardware.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-001
+STATUS: Accepted
+TITLE: Housekeeping controller firmware
+STATEMENT: >>>
+The MicroBlaze V shall run bare-metal firmware that owns the XADC, the timebase watchdog, the
+switches and RGB LED, and PmodCAN #2 through its own MCP2515 driver over AXI Quad SPI. The
+MCP2515 driver shall be portable C with the SPI transfer injected, so it is unit-tested against
+a register-level model of the chip.
+<<<
+RATIONALE: >>>
+A housekeeping sub-controller independent of Linux, as on real payloads; the CAN driver is
+written, not borrowed, and verified without hardware.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-002
+STATUS: Accepted
+TITLE: CAN bootloader
+STATEMENT: >>>
+A bootloader in BRAM shall load the housekeeping application over CAN, verify it (transport
+CRC, image header and payload CRC, load address and entry point) before it can be started, and
+tolerate lost frames and responses without corrupting the image.
+<<<
+RATIONALE: >>>
+Firmware of the sub-controller is updated in the field over the bus it already has.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-003
+STATUS: Accepted
+TITLE: Housekeeping CAN protocol
+STATEMENT: >>>
+Housekeeping telemetry (temperature, supply voltages, status), commands with acknowledgements
+and time synchronisation shall be exchanged over CAN at 500 kbit/s with 11-bit identifiers,
+defined once in a portable C library used by the firmware and by Linux.
+<<<
+RATIONALE: >>>
+One definition on both ends of the bus.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-004
+STATUS: Accepted
+TITLE: Firmware image format
+STATEMENT: >>>
+Housekeeping application images shall carry a header with magic, load address, entry point,
+size, version, payload CRC-32 and header CRC-32; the build shall produce such images and the
+bootloader and Linux tools shall check them.
+<<<
+RATIONALE: >>>
+A wrong or damaged image is rejected before it runs.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-005
+STATUS: Accepted
+TITLE: Housekeeping application behaviour
+STATEMENT: >>>
+The housekeeping application shall send telemetry at a commandable period (100 ms to 10 s,
+default 1 s), latch XADC alarms and CAN errors until cleared, blink a heartbeat LED, and enter
+the bootloader on a keyed command. Its logic shall be free of register access and unit-tested
+on the host.
+<<<
+RATIONALE: >>>
+Predictable, testable behaviour of the sub-controller.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HKC-006
+STATUS: Accepted
+TITLE: Linux housekeeping tool
+STATEMENT: >>>
+A Linux tool shall monitor housekeeping telemetry, send commands and load application images
+over SocketCAN, retrying requests whose response is lost. At boot a service shall load the
+application image shipped in the root file system.
+<<<
+RATIONALE: >>>
+Operators and the boot sequence use the same tested client.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-001
+STATUS: Accepted
+TITLE: Forward error correction
+STATEMENT: >>>
+The modem shall use the CCSDS K = 7 rate 1/2 convolutional code (131.0-B) with the CCSDS
+puncturing patterns for rates 2/3, 3/4, 5/6 and 7/8, terminated blocks, and a soft-decision
+Viterbi decoder.
+<<<
+RATIONALE: >>>
+Standard space channel code with a well-known performance; soft decisions gain about 2 dB.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-002
+STATUS: Accepted
+TITLE: Modulations and MODCOD table
+STATEMENT: >>>
+The modem shall support Gray-mapped BPSK, QPSK and 8PSK with unit symbol energy and max-log
+soft demapping, combined into at least five MODCODs ordered by spectral efficiency, each with an
+Es/N0 threshold.
+<<<
+RATIONALE: >>>
+Range of operating points for adaptive coding and modulation.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-003
+STATUS: Accepted
+TITLE: Pulse shaping
+STATEMENT: >>>
+Symbols shall be shaped with a root-raised-cosine filter (roll-off 0.35, span 8 symbols, unit
+energy); the software model shall provide the taps for the PL filters and for simulation.
+<<<
+RATIONALE: >>>
+Band-limited signal without inter-symbol interference after matched filtering.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-004
+STATUS: Accepted
+TITLE: Physical-layer frame
+STATEMENT: >>>
+Every frame shall start with the CCSDS ASM (BPSK) and a CRC-protected, repetition-coded BPSK
+header that announces MODCOD, frame type and sequence number, followed by a randomized,
+CRC-16-protected, FEC-coded 128-byte payload with pilot blocks every 512 payload symbols.
+Without data the transmitter shall send idle frames with a known PN9 payload.
+<<<
+RATIONALE: >>>
+The receiver learns each frame's MODCOD before its payload arrives (frame-by-frame ACM), and idle
+frames give a continuous bit error rate measurement.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-005
+STATUS: Accepted
+TITLE: Receiver performance
+STATEMENT: >>>
+The receiver shall acquire and track symbol timing, frame timing and carrier phase from an
+unknown start, decode at least 22 of 25 frames of each MODCOD at 1 dB above its Es/N0 threshold
+in AWGN, and estimate Es/N0 within 1.5 dB.
+<<<
+RATIONALE: >>>
+Verifiable link performance; the Es/N0 estimate drives ACM.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-006
+STATUS: Accepted
+TITLE: Channel model
+STATEMENT: >>>
+A seeded channel model shall apply gain, carrier phase and frequency offset, fractional timing
+offset and complex AWGN at a given Es/N0.
+<<<
+RATIONALE: >>>
+Reproducible link tests without hardware; the same model drives the software loopback.
+<<<
+
+[REQUIREMENT]
+UID: SRS-MDM-007
+STATUS: Accepted
+TITLE: Modem application
+STATEMENT: >>>
+The Core 1 modem application shall accept configuration, channel, ACM, time and TX frame
+messages, queue TX frames, send idle frames when the queue is empty, forward received data
+frames, report status once per second, and run a software loopback when the PL datapath is not
+used. It shall contain no OS or register access.
+<<<
+RATIONALE: >>>
+The same code runs in the firmware, in the payload simulator and in unit tests.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-001
+STATUS: Accepted
+TITLE: FreeRTOS firmware on Core 1
+STATEMENT: >>>
+Linux shall load the FreeRTOS modem firmware from the root file system into the rtos_fw
+partition, start it on Cortex-A9 Core 1 and see it report RUNNING within 2 s. The firmware shall
+not initialise resources Linux owns (L2 cache controller, SCU, GIC distributor).
+<<<
+RATIONALE: >>>
+Hard-real-time modem control beside a general-purpose OS on one chip.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-002
+STATUS: Accepted
+TITLE: Inter-core message rings
+STATEMENT: >>>
+Linux and the firmware shall exchange messages through two lock-free single-producer /
+single-consumer rings in the shared partition, with interrupt doorbells in both directions. The
+ring implementation shall be one source file used by the kernel driver, the firmware and the
+host tests.
+<<<
+RATIONALE: >>>
+No drift between the two sides of the protocol; the transport is testable on the host.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-003
+STATUS: Accepted
+TITLE: Message set and Linux interface
+STATEMENT: >>>
+The message set between Linux and the firmware shall be defined once in a C library with
+encoders and decoders; Linux user space shall use it through a character device and a typed C++
+client.
+<<<
+RATIONALE: >>>
+One definition of every message; applications never handle raw bytes.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-004
+STATUS: Accepted
+TITLE: Memory isolation
+STATEMENT: >>>
+Linux shall reserve every DDR region Core 1 owns as no-map memory, and the firmware's MMU shall
+map only the regions and peripherals the address map gives to the RTOS or to both; any other
+access from Core 1 shall fault.
+<<<
+RATIONALE: >>>
+A stray pointer on one core must not corrupt the other OS.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-005
+STATUS: Accepted
+TITLE: Firmware fault detection and recovery
+STATEMENT: >>>
+The firmware shall report aborts, failed assertions, stack overflows and heap exhaustion in the
+shared control block and keep a heartbeat; Linux shall restart Core 1 after a fault report or a
+heartbeat stalled for 3 s.
+<<<
+RATIONALE: >>>
+FDIR: the modem recovers without a reboot of the payload.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-006
+STATUS: Accepted
+TITLE: Modem DMA streams
+STATEMENT: >>>
+The firmware shall stream TX symbols to and RX samples from the PL through the AXI DMA in
+scatter-gather mode with interrupt-driven descriptor rings, count underruns and overruns, and
+keep descriptors and buffers in non-cacheable memory.
+<<<
+RATIONALE: >>>
+Continuous real-time streams without CPU copies of every sample and without cache maintenance.
+<<<
+
+[REQUIREMENT]
+UID: SRS-AMP-007
+STATUS: Accepted
+TITLE: AMP testable without hardware
+STATEMENT: >>>
+The firmware shall run a self-test through its own IPC rings when no Linux is present, and CI
+shall boot it in QEMU's Zynq-7000 machine; a simulated Core 1 running the modem application
+shall be available to Linux-side software on the host.
+<<<
+RATIONALE: >>>
+The port, scheduler, MMU, interrupts and IPC are verified on every push, not only on the board.
+<<<
+
+[REQUIREMENT]
+UID: SRS-ACM-001
+STATUS: Accepted
+TITLE: ACM controller
+STATEMENT: >>>
+The modem firmware shall choose the MODCOD of every frame from the receiver's Es/N0: the most
+efficient MODCOD whose threshold plus a configurable margin is met, stepping down immediately,
+stepping up one MODCOD at a time after a configurable hysteresis has held for several frames,
+and falling back to the most robust MODCOD without lock. Every change shall be reported.
+<<<
+RATIONALE: >>>
+Maximum throughput without frame loss as the channel changes, without oscillating on a noisy
+estimate.
+<<<
+
+[REQUIREMENT]
+UID: SRS-ACM-002
+STATUS: Accepted
+TITLE: LEO pass emulation
+STATEMENT: >>>
+The payload manager shall emulate a low-Earth-orbit pass (altitude, maximum elevation, elevation
+mask, zenith Es/N0, time lapse) by driving the channel emulator with the Es/N0 that the geometry
+and free-space loss give, and shall report elevation, range, range rate, AOS and LOS.
+<<<
+RATIONALE: >>>
+The adaptive link is exercised with the profile a real downlink sees, repeatably.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PUS-001
+STATUS: Accepted
+TITLE: Space packets with PUS-C headers
+STATEMENT: >>>
+Telecommands and telemetry shall be CCSDS Space Packets with PUS-C secondary headers (TM with CUC
+time) and a CRC-16 packet error control field; decoding shall reject wrong versions, types,
+lengths and CRCs.
+<<<
+RATIONALE: >>>
+Standard ground interface; any PUS-capable ground system can talk to the payload.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PUS-002
+STATUS: Accepted
+TITLE: TM transfer frames and virtual channels
+STATEMENT: >>>
+Downlinked packets shall be multiplexed into 128-byte CCSDS TM Transfer Frames on prioritised
+virtual channels with first-header pointers, packets may span frames, and the demultiplexer
+shall detect lost frames from the frame counters and resynchronise at the next packet boundary.
+<<<
+RATIONALE: >>>
+A frame lost to the channel costs only the packets it carried.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PUS-003
+STATUS: Accepted
+TITLE: PUS services
+STATEMENT: >>>
+The payload manager shall implement ST[01] request verification, ST[03] housekeeping (periodic,
+one-shot, enable, disable, interval), ST[05] event reporting, ST[08] function management and
+ST[17] are-you-alive, with the mission definitions of the ICD.
+<<<
+RATIONALE: >>>
+Operable like a flight payload with standard services.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PLM-001
+STATUS: Accepted
+TITLE: Telemetry through the modem link
+STATEMENT: >>>
+Telemetry shall reach the ground only through the modem link; while the link has no lock or the
+emulated satellite is below the horizon, packets shall be stored and downlinked when contact
+returns.
+<<<
+RATIONALE: >>>
+The ground sees exactly what a real downlink would deliver.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PLM-002
+STATUS: Accepted
+TITLE: Payload control functions
+STATEMENT: >>>
+The ground shall be able to set the MODCOD, configure ACM, set the channel emulator, start and
+stop a pass, select the loopback and restart the modem firmware through ST[08] functions.
+<<<
+RATIONALE: >>>
+Every link parameter is commandable for tests and demonstrations.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PLM-003
+STATUS: Accepted
+TITLE: Payload manager daemon
+STATEMENT: >>>
+The payload manager shall run as a non-blocking single-threaded daemon on Linux with UDP for the
+ground link, the AMP device or a simulated Core 1, TUN devices for IP and SocketCAN for
+housekeeping, and shall run unchanged on a Linux PC in simulation mode.
+<<<
+RATIONALE: >>>
+The same binary runs on the board, in demonstrations without a board, and under the
+hardware-in-the-loop tests.
+<<<
+
+[REQUIREMENT]
+UID: SRS-NET-001
+STATUS: Accepted
+TITLE: IP over the RF link
+STATEMENT: >>>
+IP datagrams between a satellite-side and a ground-side network interface shall be carried as
+Space Packets on their own virtual channel through the modem link in both directions.
+<<<
+RATIONALE: >>>
+Standard tools (ping, iperf3, ssh) run across the emulated space link.
+<<<
+
+[REQUIREMENT]
+UID: SRS-SCPI-001
+STATUS: Accepted
+TITLE: SCPI parser
+STATEMENT: >>>
+The SCPI parser shall accept SCPI-1999 program messages with short and long header forms,
+optional nodes, compound commands with the current-path rule, numeric parameters with MINimum,
+MAXimum, DEFault and units, and shall report errors through a 16-entry error queue and the IEEE
+488.2 status registers (``*CLS``, ``*ESE``, ``*ESR?``, ``*OPC``, ``*OPC?``, ``*SRE``,
+``*STB?``, ``*WAI``, ``SYSTem:ERRor?``).
+<<<
+RATIONALE: >>>
+Standard behaviour lets instrument tools (pyVISA, LabVIEW) drive the payload without special
+cases.
+<<<
+
+[REQUIREMENT]
+UID: SRS-SCPI-002
+STATUS: Accepted
+TITLE: Payload SCPI command set
+STATEMENT: >>>
+The SCPI interface shall provide ``*IDN?``, ``*RST`` and ``*TST?``, control of the MODCOD, ACM, loopback,
+channel emulator and pass emulation, restart of the modem firmware, and measurements of Es/N0,
+lock, MODCOD, bit and frame error rate over a resettable window, latency, processor load and
+link counters.
+<<<
+RATIONALE: >>>
+Everything a link test needs is scriptable from the bench.
+<<<
+
+[REQUIREMENT]
+UID: SRS-GS-001
+STATUS: Accepted
+TITLE: Ground station
+STATEMENT: >>>
+A ground station application for Windows and Linux shall send every mission telecommand, track
+their verification, and display the housekeeping, the event log and live plots of Es/N0, MODCOD,
+bit error rate and pass elevation.
+<<<
+RATIONALE: >>>
+Operates the payload the way a mission control system would.
+<<<
+
+[REQUIREMENT]
+UID: SRS-GS-002
+STATUS: Accepted
+TITLE: Headless ground station
+STATEMENT: >>>
+The ground station shall be able to connect, start a pass and save a screenshot without a
+display, for documentation and continuous integration.
+<<<
+RATIONALE: >>>
+Its build and its protocol handling are checked without a desktop.
+<<<
+
+[REQUIREMENT]
+UID: SRS-GS-003
+STATUS: Accepted
+TITLE: Command-line client
+STATEMENT: >>>
+A command-line client without third-party dependencies shall send the mission telecommands,
+wait for their verification with an exit status for scripts, and print housekeeping and all
+telemetry.
+<<<
+RATIONALE: >>>
+Scripting and operations from a terminal, on any machine with the toolchain.
+<<<
+
+[REQUIREMENT]
+UID: SRS-GS-004
+STATUS: Accepted
+TITLE: Python client library
+STATEMENT: >>>
+A Python library shall encode telecommands, decode all payload reports and drive the SCPI
+interface through pyVISA or a plain socket.
+<<<
+RATIONALE: >>>
+Test automation and analysis in Python.
+<<<
+
+[REQUIREMENT]
+UID: SRS-HIL-001
+STATUS: Accepted
+TITLE: Hardware-in-the-loop tests
+STATEMENT: >>>
+An automated test suite shall verify the payload end to end over its external interfaces (PUS
+over UDP, SCPI over TCP) and run unchanged against the board or against the daemon in
+simulation mode.
+<<<
+RATIONALE: >>>
+The same acceptance tests run in continuous integration and on the bench.
+<<<
+
+[REQUIREMENT]
+UID: SRS-PERF-001
+STATUS: Accepted
+TITLE: Link performance characterisation
+STATEMENT: >>>
+The frame and bit error rates of every MODCOD shall be measured against Es/N0 through the
+complete physical layer with carrier and timing offsets, and each ACM switching threshold shall
+be at or above the Es/N0 at which that MODCOD reaches a frame error rate of 1 %.
+<<<
+RATIONALE: >>>
+ACM must never select a MODCOD the link cannot carry; thresholds come from measurements.
+<<<
+
+[REQUIREMENT]
+UID: SRS-FDIR-001
+STATUS: Accepted
+TITLE: System watchdog
+STATEMENT: >>>
+The system watchdog of the Zynq shall reset the SoC when Linux stops feeding it for 30 s; the
+boot counter shall then lead to a rollback of an unconfirmed boot slot.
+<<<
+RATIONALE: >>>
+A hung kernel or init must not leave the payload unrecoverable.
+<<<
+
+[REQUIREMENT]
+UID: SRS-FDIR-002
+STATUS: Accepted
+TITLE: Service supervision
+STATEMENT: >>>
+The payload manager shall signal readiness and feed a service watchdog from its main loop; a
+crashed or hung payload manager shall be restarted, and a crash loop shall stop the service so
+that an unconfirmed boot slot is not confirmed.
+<<<
+RATIONALE: >>>
+Application faults are handled at the lowest level that can recover them.
 <<<

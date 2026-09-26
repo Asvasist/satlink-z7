@@ -1,0 +1,11 @@
+// BOOT.BIN for secure A/B boot (Stage 3): FSBL (Vitis) + bitstream (Vivado) + U-Boot (Yocto).
+// U-Boot must carry the device tree with the FIT verification key that uboot-sign.bbclass
+// added, so it is loaded as u-boot-dtb.bin (u-boot-nodtb.bin + signed DTB) at CONFIG_TEXT_BASE
+// instead of u-boot.elf.
+//   bootgen -arch zynq -image satlink-ab.bif -o BOOT.BIN -w on
+the_ROM_image:
+{
+    [bootloader] fsbl.elf
+    system.bit
+    [load=0x04000000, startup=0x04000000] u-boot-dtb.bin
+}

@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
+obj-m += satlink_amp.o
+satlink_amp-y := satlink_amp_drv.o ipc_ring_kernel.o
+ccflags-y += -I$(src)/../../include/uapi -I$(src)/../../../libs/amp/include

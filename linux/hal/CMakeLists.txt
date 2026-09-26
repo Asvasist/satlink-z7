@@ -17,6 +17,7 @@ if(SATLINK_TARGET STREQUAL "linux")
     target_sources(satlink_hal PRIVATE
         src/posix_char_device.cpp
         src/i2c_dev_bus.cpp
+        src/socket_can_bus.cpp
     )
 endif()
 
@@ -34,5 +35,6 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_include_directories(satlink_hal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/compat)
 endif()
 
+target_link_libraries(satlink_hal PUBLIC satlink::hkc_proto)
 target_compile_features(satlink_hal PUBLIC cxx_std_20)
 satlink_target_defaults(satlink_hal)

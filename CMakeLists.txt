@@ -7,11 +7,12 @@
 #
 # Pick a target with a preset:  cmake --preset host-debug   (see CMakePresets.json)
 # @implements SRS-BLD-001
+# @implements SRS-SYS-001
 
 cmake_minimum_required(VERSION 3.25)
 
 project(satlink_z7
-    VERSION 0.1.0
+    VERSION 0.6.0
     DESCRIPTION "Software-defined satellite payload and link testbed on the Zynq-7020"
     HOMEPAGE_URL "https://github.com/Asvasist/satlink-z7"
     LANGUAGES C
@@ -70,10 +71,41 @@ message(STATUS "SatLink-Z7 ${PROJECT_VERSION} (${SATLINK_GIT_REVISION}) target=$
 
 add_subdirectory(libs/common)
 add_subdirectory(libs/regs)
+add_subdirectory(libs/hkc_proto)
+add_subdirectory(libs/mcp2515)
+if(NOT SATLINK_TARGET STREQUAL "hkc")
+    add_subdirectory(libs/modem)
+    add_subdirectory(libs/amp)
+    add_subdirectory(libs/modem_app)
+    add_subdirectory(libs/acm)
+endif()
+
+if(SATLINK_TARGET MATCHES "^(host|rtos)$")
+    add_subdirectory(firmware/rtos/dma)
+endif()
+if(SATLINK_TARGET MATCHES "^(host|hkc)$")
+    add_subdirectory(firmware/hkc/app_logic)
+endif()
+if(SATLINK_TARGET STREQUAL "hkc")
+    add_subdirectory(firmware/hkc)
+endif()
+if(SATLINK_TARGET STREQUAL "rtos")
+    add_subdirectory(firmware/rtos)
+endif()
 
 if(SATLINK_TARGET MATCHES "^(host|linux)$")
+    add_subdirectory(libs/pus)
+    add_subdirectory(libs/scpi)
     add_subdirectory(linux/hal)
     add_subdirectory(linux/diag)
+    add_subdirectory(linux/hkc)
+    add_subdirectory(linux/bootctl)
+    add_subdirectory(linux/amp)
+    add_subdirectory(linux/payload)
+endif()
+if(SATLINK_TARGET STREQUAL "host")
+    add_subdirectory(host/gs/core)
+    add_subdirectory(tools/perf)
 endif()
 
 if(SATLINK_BUILD_TESTS)

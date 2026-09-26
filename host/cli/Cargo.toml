@@ -1,0 +1,23 @@
+[package]
+name = "satlink-cli"
+version = "0.6.0"
+edition = "2021"
+rust-version = "1.70"
+description = "Command-line ground segment for the SatLink-Z7 payload (PUS over UDP)"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "satlink"
+path = "src/main.rs"
+
+[lib]
+name = "satlink_cli"
+path = "src/lib.rs"
+
+# No dependencies: the tool builds offline, on Linux and Windows, from the standard library.
+[dependencies]
+
+[profile.release]
+lto = true
+codegen-units = 1

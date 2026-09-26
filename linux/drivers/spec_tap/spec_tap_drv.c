@@ -185,7 +185,7 @@ static int satlink_st_probe(struct platform_device *pdev)
 
 	version_reg = readl(st->regs + ST_REG_VERSION);
 	dev_info(dev, "spec_tap v%u.%u ready, DMA %s\n", version_reg >> ST_VERSION_MAJOR_SHIFT,
-		 version_reg & ST_VERSION_MINOR_MASK,
+		 (u32)(version_reg & ST_VERSION_MINOR_MASK),
 		 st->dma_s2mm ? "attached" : "not yet attached");
 
 	return 0;

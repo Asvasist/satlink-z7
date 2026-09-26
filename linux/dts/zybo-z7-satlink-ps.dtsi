@@ -8,6 +8,7 @@
  *
  * @implements SRS-PER-001
  * @implements SRS-PER-002
+ * @implements SRS-FDIR-001
  */
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/pinctrl/pinctrl-zynq.h>
@@ -57,7 +58,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_spi1_default>, <&pinctrl_can_int_default>;
 
-	can0: can@0 {
+	mcp2515_can: can@0 {
 		compatible = "microchip,mcp2515";
 		reg = <0>;
 		clocks = <&can_osc>;
@@ -71,4 +72,11 @@
 &i2c0 {
 	status = "okay";
 	clock-frequency = <100000>;
+};
+
+/* System watchdog: systemd feeds it (RuntimeWatchdogSec); a timeout resets the whole SoC instead
+ * of only raising an interrupt. The timeout is the power-on value, before systemd takes over. */
+&watchdog0 {
+	reset-on-timeout;
+	timeout-sec = <60>;
 };

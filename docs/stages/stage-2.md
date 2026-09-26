@@ -61,15 +61,17 @@ SPI) are configured, and a small tool exercises all of it on the board.
 - The Linux-only sources (POSIX and i2c-dev backends, `satlink-diag`) cross-compile for
   `arm-linux-gnueabihf` at `-Werror`, and `satlink-diag` links into an ARM executable. It has not
   been run on a board.
-- Not built yet: the two kernel modules and the device trees (they need a configured kernel tree,
-  so the first Yocto build), the CMake wiring itself, and the first CI run.
+- Stage 4 update: both kernel modules build and link against linux-xlnx `xlnx_rebase_v6.6_LTS`
+  (`xilinx_zynq_defconfig`) with `W=1` and no warnings, and the board device trees compile with
+  the kernel's `dtc` at `W=1`. That build found a duplicate `can0` label (the Zynq's own CAN
+  controller uses it; the MCP2515 node is now `mcp2515_can`). CI repeats both on every push.
 
 ## Bring-up checklist (hardware)
 
 Values assumed in code or device tree that have to be confirmed on the board:
 
-- [ ] `dtc` accepts `zynq-zybo-z7-satlink.dts`; pinctrl group names (`spi1_0_grp`, `gpio0_0_grp`)
-      match the kernel's Zynq pinctrl
+- [x] `dtc` accepts `zynq-zybo-z7-satlink.dts` (Stage 4, CI)
+- [ ] pinctrl group names (`spi1_0_grp`, `gpio0_0_grp`) match the kernel's Zynq pinctrl at runtime
 - [ ] PL clock: `clocks = <&clkc 15>` (FCLK0) matches the hw-v1 block design
 - [ ] DMA channel numbering in `dmas = <&axi_dma_frame 0>, <&axi_dma_frame 1>` (0 = MM2S, 1 = S2MM)
 - [ ] IRQ numbers and base addresses against the Address Editor (then set `frozen` in the ICD)

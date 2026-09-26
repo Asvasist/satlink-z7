@@ -28,7 +28,7 @@ import tempfile
 import time
 
 MACHINE = "zybo-z7-20"
-DTB_NAME = "zynq-zybo-z7.dtb"
+DTB_NAME = "zynq-zybo-z7-satlink-amp.dtb"
 KERNEL_CMDLINE = "console=ttyPS0,115200 earlycon root=/dev/mmcblk0p2 rw rootwait"
 # The command echo contains "$((20+6))", the output contains "26": no false match on the echo.
 PROBE_CMD = "uname -r; echo SATLINK_SMOKE_$((20+6))_OK"

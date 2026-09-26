@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://satlink.example/schemas/satlink,amp.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: SatLink-Z7 AMP controller (FreeRTOS on Cortex-A9 Core 1)
+
+description: |
+  Loads the modem firmware into the reserved rtos_fw region, runs it on CPU1 and exposes the
+  shared-memory message rings as /dev/satlink-amp. The two interrupts are unused PL-to-PS
+  lines that each core sets pending in software as a doorbell.
+  @implements SRS-AMP-001
+
+properties:
+  compatible:
+    const: satlink,amp
+
+  memory-region:
+    maxItems: 3
+  memory-region-names:
+    items:
+      - const: rtos_fw
+      - const: ipc_shm
+      - const: modem_dma
+
+  interrupts:
+    maxItems: 2
+  interrupt-names:
+    items:
+      - const: to-linux
+      - const: to-rtos
+
+  syscon:
+    description: phandle to the SLCR (CPU1 reset and clock stop)
+
+  satlink,auto-boot:
+    type: boolean
+    description: start the firmware at probe
+
+required: [compatible, memory-region, memory-region-names, interrupts, interrupt-names, syscon]
+additionalProperties: false

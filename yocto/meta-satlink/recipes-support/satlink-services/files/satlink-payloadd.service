@@ -1,0 +1,28 @@
+# The payload manager: PUS services over UDP, telemetry through the modem link, IP over the
+# link (TUN), housekeeping controller telemetry from can0, SCPI instrument on TCP 5025.
+# The daemon reports READY=1 once configured and pings the service watchdog from its main loop:
+# a hung loop is killed and restarted (docs/fdir).
+# @implements SRS-PLM-003
+# @implements SRS-FDIR-002
+[Unit]
+Description=SatLink-Z7 payload manager
+After=network-online.target satlink-can0.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+WatchdogSec=10
+ExecStartPre=/bin/sh -c 'test -e /dev/satlink-amp'
+ExecStart=/usr/bin/satlink-payloadd --tun --can can0 --loopback software --scpi-port 5025
+ExecStartPost=/bin/sh -c 'sleep 1; /usr/bin/satlink-net-setup up'
+ExecStopPost=/usr/bin/satlink-net-setup down
+Restart=on-failure
+RestartSec=2
+# A crash loop (5 restarts in a minute) stops the service; satlink-boot-ok then does not confirm
+# a trial boot slot and U-Boot rolls back.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

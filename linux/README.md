@@ -1,16 +1,22 @@
 # Linux software (Cortex-A9 Core 0)
 
 Stage 2: platform drivers for the Linux-owned PL blocks, device-tree fragments, the C++ HAL, the
-peripherals Linux owns directly, and a diagnostic tool. Stage 5 adds the payload manager on top.
+peripherals Linux owns directly, and a diagnostic tool. Stage 3 adds the housekeeping and boot
+tools, Stage 4 the AMP driver and client, Stage 5 the payload manager on top.
 
 ```
 drivers/ccsds_frame_accel/   platform driver: DT-bound, char device, IRQ, dmaengine
 drivers/spec_tap/            platform driver: DT-bound, char device, dmaengine
+drivers/satlink_amp/         AMP: loads and supervises the Core 1 firmware, IPC rings as a char
+                             device, doorbell IRQs, heartbeat watchdog with restart
+amp/                         ModemClient, SimulatedCore1, /dev/satlink-amp backend, satlink-amp
+hkc/                         satlink-hkc: housekeeping controller over SocketCAN, CAN flasher
+bootctl/                     satlink-bootctl: A/B boot slots through the U-Boot environment
 hal/                         satlink::hal - typed C++20 wrappers (frame accelerator, spectrum
                              tap, SSM2603 codec) over abstract CharDeviceIo / I2cBus interfaces
 diag/                        satlink-diag: command logic (portable) and the Linux executable
 include/uapi/satlink/        ioctl structs shared verbatim by the kernel and user space
-dts/                         PL and PS device-tree fragments and the combined board tree
+dts/                         PL, PS and AMP device-tree fragments and the board trees
 scripts/                     CAN bring-up and loopback test (can-utils)
 ```
 
