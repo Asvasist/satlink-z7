@@ -47,12 +47,12 @@ def test_acm_changes_are_reported_as_events(pus, scpi):
     scpi.write("CHAN:ESN0 9")
     event = pus.wait_for(EventReport, timeout=10,
                          where=lambda e: e.event == Event.MODCOD_CHANGED and e.aux[0] == 4)
-    # A sudden 20 dB fade loses the frames in flight: ACM falls back to the most robust MODCOD
-    # (or straight to the target if the estimate got through) and climbs back to QPSK 3/4.
-    assert event.aux[1] <= 2 and event.severity == 1
+    # The first step leaves 8PSK 5/6. Where it lands depends on timing: the receiver's
+    # smoothed Es/N0 lags a sudden 20 dB fade, and frames lost in flight make ACM fall back to
+    # the most robust MODCOD. Either way the link settles on QPSK 3/4.
+    assert event.aux[1] < 4 and event.severity == 1
     assert event.describe().startswith("modcod changed: 8PSK 5/6 -> ")
-    pus.wait_for(EventReport, timeout=15,
-                 where=lambda e: e.event == Event.MODCOD_CHANGED and e.aux[1] == 2)
+    wait_until(lambda: scpi.query("MEAS:MODC?") == "2", 15, "ACM settled on QPSK 3/4")
 
 
 def test_telemetry_is_stored_during_an_outage_and_forwarded(pus, scpi):

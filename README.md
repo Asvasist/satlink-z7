@@ -159,7 +159,7 @@ board.
 
 | Check | Result |
 |---|---|
-| Host unit tests (C and C++, GoogleTest/Unity) | 254 pass; also under ASan/UBSan |
+| Host unit tests (C and C++, GoogleTest/Unity) | 255 pass; also under ASan/UBSan |
 | Line coverage of `libs/` | above the 80 % gate |
 | Cross builds: Linux (arm-linux-gnueabihf), FreeRTOS (arm-none-eabi), MicroBlaze V (rv32) | build with `-Werror` |
 | Kernel modules and device trees against linux-xlnx 6.6 | build with `W=1 -Werror` |

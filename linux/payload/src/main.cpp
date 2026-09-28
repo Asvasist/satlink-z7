@@ -24,6 +24,7 @@
  * @implements SRS-SCPI-002
  * @implements SRS-FDIR-002
  */
+#include <algorithm>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
@@ -255,6 +256,13 @@ int Run(const Options &o)
             scpi->AddPollFds(fds);
         }
         (void)::poll(fds.data(), fds.size(), 10);
+        // The AMP device reports POLLERR, immediately, while Core 1 is stopped or restarting:
+        // wait out the period instead of spinning on the only core Linux has.
+        if (std::any_of(fds.begin(), fds.end(),
+                        [](const pollfd &p) { return (p.revents & (POLLERR | POLLNVAL)) != 0; }))
+        {
+            (void)::poll(nullptr, 0, 10);
+        }
         const std::uint64_t now = clock.NowMs();
         if (sim)
         {

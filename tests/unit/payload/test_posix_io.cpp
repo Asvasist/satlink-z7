@@ -18,11 +18,13 @@
 #include <vector>
 
 #include "satlink/payload/posix_io.hpp"
+#include "satlink/pus/space_packet.hpp"
 
 namespace {
 
 using satlink::payload::SystemdNotifier;
 using satlink::payload::TcpLineServer;
+using satlink::payload::UdpGroundLink;
 
 class Fd
 {
@@ -152,6 +154,81 @@ TEST(TcpLineServerTest, AnswersLinesFromSeveralClients)
         ::usleep(5000);
     }
     EXPECT_EQ(1U, server.Clients());
+}
+
+/// A UDP socket bound to @p ip on an OS-assigned port (0 = any port) or on @p port.
+int BoundUdp(const char *ip, std::uint16_t port = 0)
+{
+    const int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    sockaddr_in a{};
+    a.sin_family = AF_INET;
+    a.sin_port = htons(port);
+    ::inet_pton(AF_INET, ip, &a.sin_addr);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): sockets API
+    EXPECT_EQ(0, ::bind(fd, reinterpret_cast<const sockaddr *>(&a), sizeof(a)));
+    return fd;
+}
+
+std::uint16_t PortOf(int fd)
+{
+    sockaddr_in a{};
+    socklen_t len = sizeof(a);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): sockets API
+    ::getsockname(fd, reinterpret_cast<sockaddr *>(&a), &len);
+    return ntohs(a.sin_port);
+}
+
+void SendTo(int fd, std::uint16_t port, const std::vector<std::uint8_t> &data)
+{
+    sockaddr_in a{};
+    a.sin_family = AF_INET;
+    a.sin_port = htons(port);
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): sockets API
+    ASSERT_EQ(static_cast<ssize_t>(data.size()),
+              ::sendto(fd, data.data(), data.size(), 0, reinterpret_cast<const sockaddr *>(&a),
+                       sizeof(a)));
+    ::usleep(20000);
+}
+
+TEST(UdpGroundLinkTest, OnlyAValidTelecommandMovesTheDownlink)
+{
+    // Two ground stations on different loopback addresses, same telemetry port.
+    Fd station_a(BoundUdp("127.0.0.1"));
+    const std::uint16_t tm_port = PortOf(station_a.Get());
+    Fd station_b(BoundUdp("127.0.0.2", tm_port));
+    std::uint16_t link_port = 0;
+    {
+        Fd probe(BoundUdp("0.0.0.0")); // a free port for the link, released again
+        link_port = PortOf(probe.Get());
+    }
+    UdpGroundLink link(link_port, "", tm_port);
+    Fd sender_a(BoundUdp("127.0.0.1"));
+    Fd sender_b(BoundUdp("127.0.0.2"));
+    const std::vector<std::uint8_t> tm{1, 2, 3};
+
+    satlink::pus::Telecommand tc;
+    tc.apid = 0x010;
+    tc.service = 17;
+    tc.subtype = 1;
+    SendTo(sender_a.Get(), link_port, satlink::pus::Encode(tc));
+    ASSERT_TRUE(link.ReceiveTc().has_value());
+    link.SendTm(tm);
+    ::usleep(20000);
+    EXPECT_EQ(3U, Receive(station_a.Get()).size());
+
+    SendTo(sender_b.Get(), link_port, {0xDE, 0xAD}); // garbage from another address
+    ASSERT_TRUE(link.ReceiveTc().has_value());       // handed on (the manager rejects it)
+    link.SendTm(tm);
+    ::usleep(20000);
+    EXPECT_EQ(3U, Receive(station_a.Get()).size());
+    EXPECT_EQ(0U, Receive(station_b.Get()).size());
+
+    SendTo(sender_b.Get(), link_port, satlink::pus::Encode(tc)); // a real TC does move it
+    ASSERT_TRUE(link.ReceiveTc().has_value());
+    link.SendTm(tm);
+    ::usleep(20000);
+    EXPECT_EQ(3U, Receive(station_b.Get()).size());
 }
 
 TEST(TcpLineServerTest, PortInUseThrows)

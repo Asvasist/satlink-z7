@@ -31,7 +31,7 @@ class SystemClock final : public Clock
 
 /**
  * @brief UDP: TCs arrive on @p tc_port; TM goes to the ground station address, which is the
- *        configured one or, if none, the sender of the last TC (answer whoever commands).
+ *        configured one or, if none, the sender of the last valid TC (answer whoever commands).
  */
 class UdpGroundLink final : public GroundLink
 {

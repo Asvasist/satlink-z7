@@ -217,11 +217,15 @@ static int amp_load_elf(struct satlink_amp *amp, const struct firmware *fw, u32 
 static void amp_init_shm(struct satlink_amp *amp)
 {
 	void *base = amp->shm_va;
+	const u32 boot_count = amp->ctrl->boot_count; /* survives the reset of the block */
 
+	/* Readers and writers may be inside a ring operation: keep them out while it is reset. */
+	mutex_lock(&amp->rx_lock);
+	mutex_lock(&amp->tx_lock);
 	memset(base, 0, SATLINK_SHM_TO_RTOS_OFFSET);
 	amp->ctrl->version = SATLINK_SHM_VERSION;
 	amp->ctrl->rtos_state = SATLINK_RTOS_STATE_OFFLINE;
-	amp->ctrl->boot_count = amp->ctrl->boot_count + 1;
+	amp->ctrl->boot_count = boot_count + 1;
 	amp->ctrl->irq_to_rtos = amp->hwirq_to_rtos;
 	amp->ctrl->irq_to_linux = amp->hwirq_to_linux;
 	satlink_ring_init(&amp->to_rtos, base + SATLINK_SHM_TO_RTOS_OFFSET, SATLINK_SHM_RING_BYTES);
@@ -230,6 +234,8 @@ static void amp_init_shm(struct satlink_amp *amp)
 	wmb();
 	amp->ctrl->magic = SATLINK_SHM_MAGIC; /* last: the firmware attaches only when it sees it */
 	wmb();
+	mutex_unlock(&amp->tx_lock);
+	mutex_unlock(&amp->rx_lock);
 }
 
 static int amp_start_locked(struct satlink_amp *amp)

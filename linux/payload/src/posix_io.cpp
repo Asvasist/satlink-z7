@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include "satlink/hkc/hk_proto.h"
+#include "satlink/pus/space_packet.hpp"
 
 namespace satlink::payload {
 
@@ -120,13 +121,16 @@ std::optional<std::vector<std::uint8_t>> UdpGroundLink::ReceiveTc()
     {
         return std::nullopt;
     }
-    if (!fixed_destination_)
+    buf.resize(static_cast<std::size_t>(n));
+    // Telemetry follows whoever commands, but only a well-formed telecommand counts: a stray or
+    // corrupt datagram must not redirect the downlink.
+    pus::Telecommand tc;
+    if (!fixed_destination_ && pus::Decode(buf, tc) == pus::DecodeError::kNone)
     {
         dest_->addr = from;
         dest_->addr.sin_port = htons(tm_port_);
         dest_->valid = true;
     }
-    buf.resize(static_cast<std::size_t>(n));
     return buf;
 }
 

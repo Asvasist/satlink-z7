@@ -19,6 +19,21 @@ if grep -q "^${target} " /proc/mounts; then
     exit 1
 fi
 
+# Check the image before touching the slot: sh has no pipefail, so a corrupt archive would
+# otherwise leave a truncated file system behind without an error.
+case "${image}" in
+    *.gz)
+        gzip -t "${image}" || { echo "satlink-update: ${image} is corrupt" >&2; exit 1; }
+        size="$(gzip -dc "${image}" | wc -c)"
+        ;;
+    *)  size="$(wc -c < "${image}")" ;;
+esac
+part_size="$(blockdev --getsize64 "${target}")"
+if [ "${size}" -gt "${part_size}" ]; then
+    echo "satlink-update: image (${size} bytes) larger than ${target} (${part_size} bytes)" >&2
+    exit 1
+fi
+
 echo "satlink-update: writing ${image} to ${target}"
 case "${image}" in
     *.gz) gzip -dc "${image}" | dd of="${target}" bs=4M conv=fsync ;;

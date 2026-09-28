@@ -27,7 +27,7 @@ flowchart TB
 | 1 | Core 1 hang (no fault report) | Heartbeat counter unchanged for 3 s | as above | as above | as above | SRS-AMP-005 |
 | 2 | `satlink-payloadd` crash | systemd sees the process exit | Separate process | `Restart=on-failure` after 2 s | Journal. The ground sees a telemetry gap. | SRS-FDIR-002 |
 | 2 | `satlink-payloadd` hang | `WATCHDOG=1` missing for 10 s (the daemon pings from its main loop every 5 s) | as above | systemd sends SIGABRT (core dump), then restarts the service | as above | SRS-FDIR-002 |
-| 2 | Crash loop | 5 restarts within 60 s (`StartLimitBurst`) | as above | Service stays down. On a trial boot slot `satlink-boot-ok` does not confirm, which leads to level 4. | Journal, boot counter | SRS-FDIR-002, SRS-BOOT-002 |
+| 2 | Crash loop | 5 restarts within 60 s (`StartLimitBurst`) | as above | Service stays down. On a trial boot slot, the health check 90 s after boot (`satlink-boot-ok.timer`) sees the failed unit, does not confirm and reboots, which leads to level 4. | Journal, boot counter | SRS-FDIR-002, SRS-BOOT-002 |
 | 3 | Kernel or PID 1 hang | systemd stops feeding the SWDT for 30 s | Hardware timer in the PS, independent of both CPUs | SoC reset (`reset-on-timeout`) | `bootcount` in the U-Boot environment | SRS-FDIR-001 |
 | 4 | New software that does not come up | `bootcount > bootlimit (3)` while `upgrade_available=1` | Boot slots A and B, golden partition | `altbootcmd` boots the other slot, then the golden image | `rollback=1` in the environment, `satlink-bootctl status` | SRS-BOOT-002 |
 | - | Over-temperature, supply out of range, CAN errors | Housekeeping controller (XADC alarms, sticky error flags) | PL soft core with its own clock and firmware | None yet: reported to the ground, which decides | Platform HK (SID 3): temperature, supplies, error flags | SRS-HKC-005 |
@@ -50,6 +50,7 @@ flowchart TB
 | Service watchdog, restart policy | `yocto/meta-satlink/recipes-support/satlink-services/files/satlink-payloadd.service` |
 | System watchdog | `satlink-watchdog.conf` (→ `/etc/systemd/system.conf.d/`), `&watchdog0` in `linux/dts/zybo-z7-satlink-ps.dtsi` |
 | Boot counter and rollback | `yocto/meta-satlink/recipes-bsp/u-boot/files/satlink-env.txt` (`bootlimit`, `altbootcmd`) |
+| Health check of a trial slot | `satlink-boot-ok.timer` (90 s after boot) and `.service` (`systemctl is-system-running`, reboot if not `running`; skipped on the golden image) |
 
 ## Tested
 

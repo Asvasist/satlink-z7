@@ -1,0 +1,12 @@
+# Checks the health of a trial boot slot 90 s after boot, when a crash-looping service has
+# reached its start limit (5 restarts at 2 s) and shows as failed.
+# @implements SRS-BOOT-002
+[Unit]
+Description=SatLink-Z7 confirm the running boot slot once the system has settled
+
+[Timer]
+OnBootSec=90s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

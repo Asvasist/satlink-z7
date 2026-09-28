@@ -18,7 +18,7 @@ constexpr const char *kUsage =
     "  prepare-update   put the inactive slot on trial for the next boot\n"
     "  mark-good        confirm the running slot unconditionally\n"
     "  confirm          confirm the running slot if the system is healthy; exit 4 otherwise\n"
-    "                   (satlink-boot-ok.service reboots on that, so U-Boot counts the boot)\n";
+    "                   (satlink-boot-ok.timer/.service reboot on that, so U-Boot counts it)\n";
 
 } // namespace
 
