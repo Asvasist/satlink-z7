@@ -29,6 +29,10 @@
  * transfers, roughly 20 us at a 10 MHz SPI clock). */
 #define AUTOBOOT_POLLS (100000UL)
 
+/* Attempts to queue a response while all transmit buffers are busy. Without an acknowledging
+ * node on the bus they never free up; the response is then dropped so the autoboot still runs. */
+#define SEND_ATTEMPTS (10000UL)
+
 /* Mailbox word 1 tells the application why it was started. */
 #define MAILBOX_STAY        (HKC_MAILBOX_ADDR + 0U)
 #define MAILBOX_RESET_CAUSE (HKC_MAILBOX_ADDR + 4U)
@@ -114,7 +118,10 @@ int main(void)
             if (satlink_canboot_target_handle(&session, &frame, &response))
             {
                 talked = true;
-                while (satlink_mcp2515_send(&can, &response) == SATLINK_ERR_FULL)
+                for (uint32_t attempt = 0U;
+                     (attempt < SEND_ATTEMPTS) &&
+                     (satlink_mcp2515_send(&can, &response) == SATLINK_ERR_FULL);
+                     ++attempt)
                 {
                 }
             }

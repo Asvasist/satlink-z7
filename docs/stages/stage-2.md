@@ -8,8 +8,8 @@ SPI) are configured, and a small tool exercises all of it on the board.
 
 | # | Criterion | Requirement | Status |
 |---|---|---|---|
-| 1 | `ccsds_frame_accel` platform driver: DT-bound, char device, IRQ, dmaengine channels | SRS-DRV-001..004 | written, first kernel build pending |
-| 2 | `spec_tap` platform driver: DT-bound, char device, dmaengine channel | SRS-DRV-001/002/004 | written, first kernel build pending |
+| 1 | `ccsds_frame_accel` platform driver: DT-bound, char device, IRQ, dmaengine channels | SRS-DRV-001..004 | done; builds against linux-xlnx 6.6 with `W=1 -Werror` (CI job `kernel`); board pending |
+| 2 | `spec_tap` platform driver: DT-bound, char device, dmaengine channel | SRS-DRV-001/002/004 | done; builds against linux-xlnx 6.6 with `W=1 -Werror` (CI job `kernel`); board pending |
 | 3 | UAPI headers shared verbatim by kernel and user space | SRS-DRV-002 | done |
 | 4 | `satlink::hal::FrameAccelerator` and `SpecTap`, mock-tested without hardware | SRS-HAL-001/002 | done (12 tests) |
 | 5 | SSM2603 configured over I2C: `Ssm2603` HAL with register shadow, i2c-dev backend | SRS-PER-001 | done (10 tests) |

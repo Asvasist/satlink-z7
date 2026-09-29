@@ -84,9 +84,15 @@ stateDiagram-v2
   (`satlink-env.txt`). `CONFIG_ENV_WRITEABLE_LIST` lets `uboot.env` on the FAT partition change
   only `boot_slot`, `bootcount`, `upgrade_available` and `rollback`, so editing the file cannot
   redirect `bootcmd`.
-- **Health-gated confirmation.** `satlink-boot-ok.service` runs `satlink-bootctl confirm`,
-  which ends a trial only if systemd reports `running`. Otherwise the service fails and
+- **Health-gated confirmation.** 90 s after boot, `satlink-boot-ok.timer` starts
+  `satlink-boot-ok.service`, which runs `satlink-bootctl confirm`. That ends a trial only if
+  systemd reports `running` (no failed units). Otherwise the service fails and
   `FailureAction=reboot` restarts the board, so U-Boot counts the attempt.
+  - **Why a timer.** A unit that is part of the boot cannot wait for the boot to finish: it
+    would wait for itself.
+  - **Why 90 s.** A crash-looping service has reached its start limit by then and shows as
+    failed.
+  - **Golden image.** The service does not run on it (`ConditionKernelCommandLine`).
 - **Model and tests.** `linux/bootctl` carries a model of the U-Boot logic
   (`PredictNextBoot`, also printed by `satlink-bootctl status`). The tests run complete
   scenarios (good update, bad update with rollback, both slots failing) through a simulation of

@@ -1,16 +1,17 @@
-# Ends an A/B boot trial once the system is healthy. If it is not, reboot: U-Boot counts the
-# boot and rolls back after bootlimit attempts.
+# Ends an A/B boot trial once the system is healthy ("systemctl is-system-running" says
+# running: no failed units). If it is not, reboot: U-Boot counts the boot and rolls back after
+# bootlimit attempts. Started by satlink-boot-ok.timer, not as part of the boot: waiting for
+# the boot to finish from inside it would wait for itself. Not on the golden image: it has
+# nothing to confirm, and rebooting it would turn the last fallback into a reboot loop.
 # @implements SRS-BOOT-002
 [Unit]
 Description=SatLink-Z7 confirm the running boot slot
 After=multi-user.target
 ConditionPathExists=/boot/sd/uboot.env
+ConditionKernelCommandLine=!satlink.slot=golden
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/satlink-bootctl confirm
 FailureAction=reboot
 TimeoutStartSec=5min
-
-[Install]
-WantedBy=multi-user.target

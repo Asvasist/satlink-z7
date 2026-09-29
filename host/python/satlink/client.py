@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import socket
 import time
+from collections import deque
 from typing import Callable, Optional, Type, TypeVar
 
 from .mission import TC_PORT, TM_PORT, Commander, Report, Verification, interpret
@@ -33,7 +34,8 @@ class PayloadClient:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((bind_host, tm_port))
         self.cmd = Commander(int(time.time() * 1000))
-        self.history: list[tuple[float, Report]] = []
+        # Recent reports (monotonic time, report); bounded for long monitoring sessions.
+        self.history: deque[tuple[float, Report]] = deque(maxlen=10000)
         self.bad_packets = 0
 
     def close(self) -> None:

@@ -15,6 +15,7 @@ registers.
 | CAN protocol v1 (Linux ↔ housekeeping MCU) | this page, `libs/hkc_proto` | implemented (Stage 3) |
 | Ground interface: CCSDS/PUS over UDP, TM frames | this page, `libs/pus`, `linux/payload/.../mission.hpp` | implemented (Stage 5, SID 4 in Stage 6) |
 | Instrument interface: SCPI over TCP | this page, `libs/scpi` | implemented (Stage 6) |
+| Security of the ground interfaces | this page, section 7 | as designed: lab network only |
 
 ## 1. Conventions
 
@@ -173,6 +174,24 @@ set: [`scpi_instrument.hpp`](../../linux/payload/include/satlink/payload/scpi_in
 
 `*IDN?` answers `SatLink-Z7,Payload Modem,<serial>,<version>`. Not-a-number is `9.91E+37`,
 ±infinity `±9.9E+37`. BER and FER cover the window since the last `MEASure:RESet`.
+
+## 7. Security of the ground interfaces
+
+The telecommand port (UDP 10025) and the SCPI port (TCP 5025) have **no authentication or
+encryption**, like the bench instruments and ground-segment simulators they imitate. Anyone who
+can reach the board can command it, including a restart of the modem firmware. Measures in
+place:
+
+- **No redirection of telemetry.** The downlink moves to a new ground station only for a
+  well-formed telecommand (valid PUS header and CRC), so a stray datagram cannot redirect
+  telemetry. `--gs HOST` fixes the destination entirely.
+- **Bounded clients.** At most 8 SCPI clients, and program messages of at most 8 KiB.
+- **Validated input.** Every telecommand is checked (length, CRC, APID, arguments) before it
+  acts.
+
+Run the board on an isolated lab network, or behind a firewall that admits only the ground
+station. An authenticated link, for example CCSDS SDLS or a TLS or VPN tunnel, is outside the
+scope of this testbed.
 
 Events: 1 link locked, 2 link lost, 3 MODCOD changed (from u8, to u8), 4 AOS, 5 LOS,
 6 firmware log (text), 7 modem restarted.

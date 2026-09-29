@@ -10,6 +10,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 SRC_URI = " \
     file://fw_env.config \
     file://satlink-boot-ok.service \
+    file://satlink-boot-ok.timer \
     file://satlink-update.sh \
     file://satlink-can0.service \
     file://satlink-hkc-loader.service \
@@ -21,7 +22,7 @@ S = "${WORKDIR}"
 
 inherit systemd allarch
 
-SYSTEMD_SERVICE:${PN} = "satlink-boot-ok.service satlink-can0.service satlink-hkc-loader.service \
+SYSTEMD_SERVICE:${PN} = "satlink-boot-ok.timer satlink-can0.service satlink-hkc-loader.service \
                           satlink-payloadd.service"
 
 # HKC application image (hkc_app.slhk from the hkc-riscv CMake preset). Point this at a built
@@ -36,7 +37,8 @@ do_install() {
     install -m 0644 ${S}/fw_env.config ${D}${sysconfdir}/fw_env.config
     install -m 0755 ${S}/satlink-update.sh ${D}${bindir}/satlink-update
     install -m 0755 ${S}/satlink-net-setup.sh ${D}${bindir}/satlink-net-setup
-    install -m 0644 ${S}/satlink-boot-ok.service ${S}/satlink-can0.service \
+    install -m 0644 ${S}/satlink-boot-ok.service ${S}/satlink-boot-ok.timer \
+        ${S}/satlink-can0.service \
         ${S}/satlink-hkc-loader.service ${S}/satlink-payloadd.service \
         ${D}${systemd_system_unitdir}/
     if [ -n "${SATLINK_HKC_IMAGE}" ]; then
