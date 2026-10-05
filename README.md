@@ -4,9 +4,12 @@
 [![Stage](https://img.shields.io/badge/software-stages%201--6-blue)](docs/stages/stage-6.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**A software-defined satellite payload and ground link, built end-to-end on a single Zynq-7020
-board — three processors, a real modulated signal, and the same engineering process a flight
-software team would use.**
+**A software-defined satellite payload and ground link designed for a single Zynq-7020 board:
+three processors, a modulated audio-band link, and the engineering process a flight software
+team would use.**
+
+> **Status:** software architecture and implementation, verified on the host, in QEMU and in
+> simulation. Hardware integration (Vivado design, board bring-up) has not started yet.
 
 SatLink-Z7 turns a Digilent Zybo Z7-20 into a miniature communications payload with a ground
 segment talking to it over Ethernet. It exists to demonstrate, in one coherent system rather than
@@ -34,14 +37,13 @@ Three processors on one chip, each with exclusive ownership of its own resources
 |---|---|---|
 | Cortex-A9 Core 0 | Embedded Linux (Yocto, PREEMPT_RT) | Payload manager, kernel drivers, CCSDS/PUS telemetry & telecommand, SCPI server, networking |
 | Cortex-A9 Core 1 | FreeRTOS (AMP: own loader driver, shared-memory IPC) | Hard-real-time modem control, adaptive coding and modulation (ACM), frame timing |
-| MicroBlaze V (soft core, in the PL) | Bare-metal, own bootloader | Housekeeping: temperatures, voltages, watchdog, CAN bus |
+| MicroBlaze V (soft core, in the PL, planned) |
 
-The programmable logic (PL) hosts a baseband modem (NCOs, RRC pulse-shaping filters, a channel
-emulator for injecting noise), a CCSDS frame accelerator, and an FFT-based spectrum monitor. The
-"RF" link is real, not simulated: a 3.5 mm cable from the board's headphone output to its line
-input carries an actual modulated carrier (12 kHz, 6 kSym/s) through the on-board audio codec, so
-modulation, synchronization, noise and adaptive coding all happen on physical signals rather than
-a software mock.
+The programmable logic (PL) is planned to host a baseband modem (NCOs, RRC pulse-shaping
+filters, a channel emulator), a CCSDS frame accelerator and an FFT-based spectrum monitor.
+The planned "RF" link is a 3.5 mm cable from the board's headphone output to its line input,
+carrying a modulated carrier (12 kHz, 6 kSym/s) through the on-board audio codec. Today the
+modem runs against a software loopback (see *The whole system without a board*).
 
 ```mermaid
 flowchart LR
@@ -85,7 +87,7 @@ simulation mode: ACM climbs from BPSK 1/2 to 8PSK 5/6 as the elevation rises.*
 | Linux kernel driver development | Platform drivers with device-tree bindings, char devices, IRQ + `dmaengine` DMA — Stage 2 |
 | AMP / heterogeneous multicore | Linux driver that loads and supervises FreeRTOS on Core 1, lock-free shared-memory IPC, MMU-enforced isolation — Stage 4 |
 | Bus protocols: SPI, I2C, I2S, UART, CAN | MCP2515 CAN over SPI, SSM2603 codec over I2C, I2S audio, debug UART consoles — Stages 2–3 |
-| DMA and custom digital logic | AXI DMA to/from the modem, frame accelerator and FFT block; RTL in `hw/rtl` |
+| DMA and custom digital logic | AXI DMA to/from the modem, frame accelerator and FFT block; RTL planned (not yet committed) |
 | Bootloaders and boot images | FSBL, U-Boot, signed FIT A/B scheme with boot counter and golden-image fallback, CAN bootloader for the soft core — Stages 1 & 3 |
 | C / C++ (C11, C++20) | `libs/common` (portable C11), C++20 HAL and payload manager, MISRA-oriented static analysis |
 | Qt / cross-platform GUI | Ground station on Windows and Linux (Qt 6 Widgets + Charts) — Stage 6 |
