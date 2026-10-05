@@ -1,4 +1,5 @@
 # Hardware (Vivado)
+> Planned layout. None of these folders exist yet; the Vivado design is the next milestone.
 
 Vivado 2025.2, part `xc7z020clg400-1`. Only sources and scripts are committed; generated
 project folders are ignored (see `.gitignore`).
