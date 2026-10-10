@@ -4,15 +4,20 @@
 [kas](https://kas.readthedocs.io), which fetches Yocto 5.0 (scarthgap), meta-openembedded,
 meta-arm and meta-xilinx.
 
-> **Status:** written but not yet built. Expect small fixes on the first build (layer
-> dependencies, meta-xilinx variables); record them in the commit history.
+> > **Status:** first full build succeeds (Yocto 5.0.21 scarthgap, AMD release 2024.2:
+> linux-xlnx 6.6.40, u-boot-xlnx 2024.01). The fixes from that build are in the commit
+> history. Booting on the board is pending.
 
 ## Build (Linux or WSL2)
 
-Yocto does not run on Windows directly. Under WSL2, keep the build **inside the Linux file
-system** (for example `~/work/satlink-z7`), not under `/mnt/d/...`: builds on the Windows drive
-are very slow and fail on case-insensitive paths. You need about 100 GB of free space and
-16 GB RAM (8 GB works with `BB_NUMBER_THREADS = "4"`).
+Yocto does not run on Windows directly. Under WSL2, keep everything **inside the Linux file
+system**, not under `/mnt/d/...`: builds on the Windows drive are very slow and fail on
+case-insensitive paths. You need about 100 GB of free space and 16 GB RAM (8 GB works with
+`BB_NUMBER_THREADS = "4"`).
+
+Run kas from a build folder **next to** the repository, not inside it: kas puts the layers and
+`build/` into the current folder, and the recipes that build this repository's code
+(`externalsrc`) scan the whole source tree.
 
 ```bash
 sudo apt install gawk wget git diffstat unzip texinfo gcc build-essential chrpath socat \
@@ -21,8 +26,9 @@ sudo apt install gawk wget git diffstat unzip texinfo gcc build-essential chrpat
 sudo locale-gen en_US.UTF-8
 pipx install kas==4.7
 
-kas build yocto/kas/zybo-z7-20.yml                 # standard kernel
-SATLINK_RT=1 kas build yocto/kas/zybo-z7-20.yml    # with the PREEMPT_RT fragment
+mkdir -p ~/work/yocto-build && cd ~/work/yocto-build
+kas build ../satlink-z7/yocto/kas/zybo-z7-20.yml                 # standard kernel
+SATLINK_RT=1 kas build ../satlink-z7/yocto/kas/zybo-z7-20.yml    # with the PREEMPT_RT fragment
 ```
 
 `SATLINK_PL_DT=1` builds and boots the board device tree that describes the PL blocks and the
@@ -31,11 +37,12 @@ extra PS peripherals (`linux/dts`). Use it only with a bitstream that contains t
 there. The default is the mainline PS-only tree used for the first boot.
 
 ```bash
-SATLINK_PL_DT=1 kas build yocto/kas/zybo-z7-20.yml
+SATLINK_PL_DT=1 kas build ../satlink-z7/yocto/kas/zybo-z7-20.yml
 ```
 
-Outputs are in `build/tmp/deploy/images/zybo-z7-20/`: `satlink-image-zybo-z7-20.rootfs.wic`,
-`u-boot.elf`, `boot.scr`, `zImage`, `zynq-zybo-z7.dtb`.
+Outputs are in `~/work/yocto-build/build/tmp/deploy/images/zybo-z7-20/`:
+`satlink-image-zybo-z7-20.rootfs.wic` (SD card image), `fitImage` (signed kernel and device
+tree), `u-boot.elf` and `zynq-zybo-z7-satlink-amp.dtb`.
 
 ## QEMU smoke test
 
