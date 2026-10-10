@@ -4,7 +4,7 @@
 [kas](https://kas.readthedocs.io), which fetches Yocto 5.0 (scarthgap), meta-openembedded,
 meta-arm and meta-xilinx.
 
-> > **Status:** first full build succeeds (Yocto 5.0.21 scarthgap, AMD release 2024.2:
+> **Status:** first full build succeeds (Yocto 5.0.21 scarthgap, AMD release 2024.2:
 > linux-xlnx 6.6.40, u-boot-xlnx 2024.01). The fixes from that build are in the commit
 > history. Booting on the board is pending.
 
