@@ -48,4 +48,7 @@ do_install() {
 }
 
 FILES:${PN} += "${nonarch_base_libdir}/firmware/satlink"
+# Started only by satlink-boot-ok.timer (no [Install] section), so it is not in
+# SYSTEMD_SERVICE, and the systemd class only packages the units listed there.
+FILES:${PN} += "${systemd_system_unitdir}/satlink-boot-ok.service"
 RDEPENDS:${PN} = "satlink-tools libubootenv-bin iproute2 iproute2-ip"

@@ -58,3 +58,7 @@ _ide/
 BOOT.BIN
 *.wic
 *.wic.bmap
+
+# externalsrc links created by Yocto builds
+oe-logs
+oe-workdir
