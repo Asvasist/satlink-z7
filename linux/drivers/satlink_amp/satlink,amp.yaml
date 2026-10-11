@@ -38,5 +38,20 @@ properties:
     type: boolean
     description: start the firmware at probe
 
-required: [compatible, memory-region, memory-region-names, interrupts, interrupt-names, syscon]
+  clocks:
+    items:
+      - description: UART0 reference clock (Core 1 console)
+      - description: UART0 APB clock
+  clock-names:
+    items:
+      - const: uart
+      - const: uart_aper
+
+  satlink,pl-datapath:
+    type: boolean
+    description: the bitstream contains the hw-v2 modem datapath (payload_ctrl, axi_dma_modem);
+      without it the firmware runs the software loopback and never accesses those addresses
+
+required: [compatible, memory-region, memory-region-names, interrupts, interrupt-names, syscon,
+           clocks, clock-names]
 additionalProperties: false

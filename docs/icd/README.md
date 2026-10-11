@@ -46,7 +46,7 @@ rings ([`libs/amp/include/satlink/amp/shm.h`](../../libs/amp/include/satlink/amp
 
 | Offset | Size | Content |
 |---|---|---|
-| 0x00000 | 4 KiB | Control block: magic, version, firmware state, heartbeat, fault code/address, boot count, doorbell IRQs, firmware version |
+| 0x00000 | 4 KiB | Control block: magic, version, firmware state, heartbeat, fault code/address, boot count, doorbell IRQs, firmware version, flags (PL datapath present) |
 | 0x01000 | 256 KiB | Ring Linux → RTOS |
 | 0x41000 | 256 KiB | Ring RTOS → Linux |
 

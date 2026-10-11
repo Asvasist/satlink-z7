@@ -95,6 +95,11 @@ void ipc_heartbeat(void)
     CTRL->heartbeat = CTRL->heartbeat + 1U;
 }
 
+bool ipc_pl_datapath(void)
+{
+    return (CTRL->flags & SATLINK_SHM_FLAG_PL_DATAPATH) != 0U;
+}
+
 satlink_status_t ipc_send(uint16_t type, const uint8_t *payload, uint16_t len)
 {
     taskENTER_CRITICAL();

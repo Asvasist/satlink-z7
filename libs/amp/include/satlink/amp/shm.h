@@ -39,6 +39,9 @@
 #define SATLINK_RTOS_STATE_RUNNING (2U) /**< Scheduler and IPC up. */
 #define SATLINK_RTOS_STATE_FAULT   (3U) /**< Firmware caught an abort, assert or stack overflow. */
 
+/** Flags in satlink_shm_ctrl_t::flags, written by Linux before it releases Core 1. */
+#define SATLINK_SHM_FLAG_PL_DATAPATH (1U << 0U) /**< hw-v2: payload_ctrl, axi_dma_modem exist. */
+
 /** Control block at offset 0. */
 typedef struct
 {
@@ -52,7 +55,8 @@ typedef struct
     uint32_t irq_to_rtos;  /**< Linux: GIC SPI Linux pends to notify the firmware. */
     uint32_t irq_to_linux; /**< Linux: GIC SPI the firmware pends to notify Linux. */
     uint32_t fw_version;   /**< RTOS: major << 16 | minor << 8 | patch. */
-    uint32_t reserved[54];
+    uint32_t flags;        /**< Linux: SATLINK_SHM_FLAG_*. */
+    uint32_t reserved[53];
 } satlink_shm_ctrl_t;
 
 #endif /* SATLINK_AMP_SHM_H */

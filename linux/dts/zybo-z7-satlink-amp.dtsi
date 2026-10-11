@@ -46,6 +46,9 @@
 		interrupts = <GIC_SPI 53 IRQ_TYPE_EDGE_RISING>, <GIC_SPI 52 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "to-linux", "to-rtos";
 		syscon = <&slcr>;
+		/* UART0 is Core 1's console: reference clock and APB clock (zynq-7000.dtsi uart0). */
+		clocks = <&clkc 23>, <&clkc 40>;
+		clock-names = "uart", "uart_aper";
 		satlink,auto-boot;
 	};
 };

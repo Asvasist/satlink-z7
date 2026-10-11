@@ -104,7 +104,7 @@ static void modem_task(void *arg)
     {
         g_app.config.loopback = (uint8_t)SATLINK_LOOP_SOFTWARE;
     }
-    g_pl_present = !g_standalone && payload_probe();
+    g_pl_present = !g_standalone && ipc_pl_datapath() && payload_probe();
     if (!g_standalone && !g_pl_present)
     {
         /* Without the PL datapath only the software loopback can run. */
