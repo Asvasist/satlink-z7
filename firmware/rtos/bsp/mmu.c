@@ -98,6 +98,21 @@ bsp_mem_type_t bsp_mmu_type_of(uint32_t addr)
              : ((tex == 1U) ? BSP_MEM_NORMAL_NC : (b ? BSP_MEM_DEVICE : BSP_MEM_FAULT));
 }
 
+/* True when any region overlaps [base, base + size). Written with unsigned differences so it
+ * cannot overflow at the top of the 4 GiB address space. */
+static bool region_overlaps(uint32_t base, uint32_t size)
+{
+    for (size_t i = 0U; i < (sizeof(k_regions) / sizeof(k_regions[0])); ++i)
+    {
+        const bsp_mem_region_t *r = &k_regions[i];
+        if (((r->base - base) < size) || ((base - r->base) < r->size))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool exec_of(uint32_t addr)
 {
     for (size_t i = 0U; i < (sizeof(k_regions) / sizeof(k_regions[0])); ++i)
@@ -159,6 +174,13 @@ static void build_tables(void)
     for (uint32_t s = 0U; s < 4096U; ++s)
     {
         const uint32_t base = s * SECTION_SIZE;
+        /* Nothing of ours in this megabyte: translation fault, no per-page scan. This runs
+         * before the caches are on, so the full scan took seconds on the board (not in QEMU). */
+        if (!region_overlaps(base, SECTION_SIZE))
+        {
+            g_l1[s] = 0U;
+            continue;
+        }
         /* Uniform megabyte? */
         const bsp_mem_type_t first = region_type(base);
         const bool first_exec = exec_of(base);
