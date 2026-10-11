@@ -40,7 +40,7 @@
 #define SATLINK_RTOS_STATE_FAULT   (3U) /**< Firmware caught an abort, assert or stack overflow. */
 
 /** Flags in satlink_shm_ctrl_t::flags, written by Linux before it releases Core 1. */
-#define SATLINK_SHM_FLAG_PL_DATAPATH (1U << 0U) /**< hw-v2 PL: payload_ctrl and axi_dma_modem exist. */
+#define SATLINK_SHM_FLAG_PL_DATAPATH (1U << 0U) /**< hw-v2: payload_ctrl, axi_dma_modem exist. */
 
 /** Control block at offset 0. */
 typedef struct
