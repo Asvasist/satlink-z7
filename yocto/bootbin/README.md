@@ -19,9 +19,11 @@ committed; they are attached to GitHub releases.
 ## Secure A/B boot (Stage 3)
 
 With `SATLINK_SECURE_BOOT = "1"` (the default from Stage 3 on) U-Boot only boots signed FIT
-images, so its device tree must contain the public key. Yocto's `uboot-sign.bbclass` writes
-that device tree into `u-boot-dtb.bin`; use `satlink-ab.bif`, which loads it at U-Boot's text
-base (0x04000000):
+images, so its device tree must contain the public key. Yocto's `uboot-sign.bbclass` appends
+that device tree to the binary: `u-boot.bin` (`u-boot-nodtb.bin` + signed DTB). `u-boot.elf`
+does not contain the key. Use `satlink-ab.bif`, which loads `u-boot.bin` at U-Boot's text base
+(0x04000000). On Windows, copy the real file behind the symlink
+(`u-boot-zybo-z7-20-<version>.bin`); `\\wsl$` does not follow Linux symlinks:
 
 ```bash
 bootgen -arch zynq -image satlink-ab.bif -o BOOT.BIN -w on
