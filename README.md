@@ -8,8 +8,10 @@
 three processors, a modulated audio-band link, and the engineering process a flight software
 team would use.**
 
-> **Status:** software architecture and implementation, verified on the host, in QEMU and in
-> simulation. Hardware integration (Vivado design, board bring-up) has not started yet.
+> **Status:** software verified on the host, in QEMU and in simulation. On the board (hardware
+> baseline hw-v1, PS and housekeeping MCU, no modem datapath yet): the signed boot chain, Linux
+> and FreeRTOS on Core 1 run, and the two cores exchange messages
+> ([bring-up report](docs/bringup/2026-10-11-hw-v1-first-boot.md)).
 
 SatLink-Z7 turns a Digilent Zybo Z7-20 into a miniature communications payload with a ground
 segment talking to it over Ethernet. It exists to demonstrate, in one coherent system rather than
@@ -144,16 +146,16 @@ yocto/           kas configuration, meta-satlink BSP layer, QEMU smoke test, BOO
 ## Roadmap and status
 
 The software of all six stages is written and verified on the host (unit tests, QEMU,
-simulation). What remains is the hardware: the Vivado block design (hw-v1, then hw-v2 with the
-modem datapath) and bring-up on the board. Every stage page ends with its checklist for the
+simulation). The hw-v1 Vivado design ([`hw/`](hw/README.md)) and the first board bring-up are
+done; hw-v2 adds the modem datapath in the PL. Every stage page ends with its checklist for the
 board.
 
 | Stage | Content | Status |
 |---|---|---|
-| 1 | Foundation and BSP: build system, CI, requirements, ICD, Yocto layer, boot | software done; first image and boot need the hw-v1 XSA ([details](docs/stages/stage-1.md)) |
+| 1 | Foundation and BSP: build system, CI, requirements, ICD, Yocto layer, boot | software done; boots on the board from SD with hw-v1 and a signed FIT ([details](docs/stages/stage-1.md)) |
 | 2 | Linux drivers, C++ HAL, diagnostics | software done, modules build against linux-xlnx 6.6; bring-up pending ([details](docs/stages/stage-2.md)) |
 | 3 | Housekeeping MCU, CAN bootloader, secure A/B boot | software done; hardware pending ([details](docs/stages/stage-3.md)) |
-| 4 | AMP and real-time modem (FreeRTOS, FEC, synchronisation) | software done, firmware self-test passes in QEMU; board pending ([details](docs/stages/stage-4.md)) |
+| 4 | AMP and real-time modem (FreeRTOS, FEC, synchronisation) | software done; on the board Core 1 starts at boot, IPC ping and software-loopback modem verified; PL datapath needs hw-v2 ([details](docs/stages/stage-4.md)) |
 | 5 | Adaptive link (ACM, LEO pass emulation), PUS services, IP over the link | software done, runs in simulation; board pending ([details](docs/stages/stage-5.md)) |
 | 6 | SCPI server, Qt ground station, Rust CLI, HIL tests, performance report, FDIR | software done, HIL suite passes against the simulator; board run pending ([details](docs/stages/stage-6.md)) |
 
@@ -171,7 +173,7 @@ board.
 | Python client and tool tests | pass |
 | Link performance: every ACM threshold ≥ measured 1 % FER point | holds, margins 0.5 to 0.8 dB |
 | Requirements traceability | every tag resolves; matrix up to date |
-| On the board | pending: see the checklists on the stage pages and in [docs/fdir](docs/fdir/README.md) |
+| On the board (hw-v1) | boot, Linux, Core 1 AMP and IPC pass; 0 bit errors in 404480 bits in software loopback ([report](docs/bringup/2026-10-11-hw-v1-first-boot.md)); CAN, A/B update and FDIR pending |
 
 CI (`.github/workflows/ci.yml`) runs all of the above on pushes to `main` and on pull requests.
 It also builds the ground station on Linux and Windows and the CLI on both.
