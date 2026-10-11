@@ -29,6 +29,10 @@ void ipc_set_state(uint32_t state);
 /** Increment the heartbeat Linux watches. */
 void ipc_heartbeat(void);
 
+/** True when Linux reported the hw-v2 PL datapath (payload_ctrl, axi_dma_modem). Never probe
+ *  those addresses otherwise: on a bitstream without them the access ends in a bus error. */
+bool ipc_pl_datapath(void);
+
 /** Send one message to Linux and raise its interrupt. Thread-safe. */
 satlink_status_t ipc_send(uint16_t type, const uint8_t *payload, uint16_t len);
 

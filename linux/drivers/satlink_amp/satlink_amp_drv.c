@@ -24,6 +24,7 @@
  * @implements SRS-AMP-005
  */
 
+#include <linux/clk.h>
 #include <linux/cpu.h>
 #include <linux/delay.h>
 #include <linux/elf.h>
@@ -97,6 +98,7 @@ struct satlink_amp {
 	int irq_to_rtos;  /* only set pending */
 	u32 hwirq_to_linux;
 	u32 hwirq_to_rtos;
+	bool pl_datapath; /* DT satlink,pl-datapath: the bitstream has the hw-v2 modem datapath */
 
 	struct mutex state_lock; /* serializes start/stop */
 	u32 state;
@@ -228,6 +230,7 @@ static void amp_init_shm(struct satlink_amp *amp)
 	amp->ctrl->boot_count = boot_count + 1;
 	amp->ctrl->irq_to_rtos = amp->hwirq_to_rtos;
 	amp->ctrl->irq_to_linux = amp->hwirq_to_linux;
+	amp->ctrl->flags = amp->pl_datapath ? SATLINK_SHM_FLAG_PL_DATAPATH : 0;
 	satlink_ring_init(&amp->to_rtos, base + SATLINK_SHM_TO_RTOS_OFFSET, SATLINK_SHM_RING_BYTES);
 	satlink_ring_init(&amp->to_linux, base + SATLINK_SHM_TO_LINUX_OFFSET,
 			  SATLINK_SHM_RING_BYTES);
@@ -614,6 +617,7 @@ static int amp_probe(struct platform_device *pdev)
 	struct satlink_amp *amp;
 	struct irq_data *d;
 	int ret;
+	struct clk *clk;
 
 	amp = devm_kzalloc(dev, sizeof(*amp), GFP_KERNEL);
 	if (!amp)
@@ -630,6 +634,15 @@ static int amp_probe(struct platform_device *pdev)
 	amp->slcr = syscon_regmap_lookup_by_phandle(dev->of_node, "syscon");
 	if (IS_ERR(amp->slcr))
 		return dev_err_probe(dev, PTR_ERR(amp->slcr), "no SLCR syscon\n");
+	/* Core 1 owns UART0 (its console). Without a consumer on Linux the clock framework gates
+	 * both UART0 clocks at late init, and Core 1 hangs on its first UART0 access. */
+	clk = devm_clk_get_enabled(dev, "uart");
+	if (IS_ERR(clk))
+		return dev_err_probe(dev, PTR_ERR(clk), "UART0 clock\n");
+	clk = devm_clk_get_enabled(dev, "uart_aper");
+	if (IS_ERR(clk))
+		return dev_err_probe(dev, PTR_ERR(clk), "UART0 bus clock\n");
+	amp->pl_datapath = of_property_read_bool(dev->of_node, "satlink,pl-datapath");
 
 	ret = amp_get_region(dev, "rtos_fw", &amp->fw);
 	if (!ret)
@@ -647,6 +660,7 @@ static int amp_probe(struct platform_device *pdev)
 		return PTR_ERR(amp->shm_va);
 	amp->ctrl = (volatile satlink_shm_ctrl_t *)amp->shm_va;
 	amp->ctrl->magic = 0;
+	amp->ctrl->boot_count = 0; /* DDR holds random data after power-on */
 
 	amp->irq_to_linux = platform_get_irq_byname(pdev, "to-linux");
 	amp->irq_to_rtos = platform_get_irq_byname(pdev, "to-rtos");
